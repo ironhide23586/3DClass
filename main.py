@@ -18,38 +18,31 @@ import numpy as np
 import pylas
 
 from data_io import PointStreamer
-
+import utils
 
 DIR = 'scratchspace'
 LAZ_FPATH = DIR + os.sep + 'C_37EZ1_3_2.laz'
+PLY_FPATH = DIR + os.sep + 'C_37EZ1_3_2.ply'
 
+GT_PCL_FPATH = DIR + os.sep + 'sg27_station9_intensity_rgb/sg27_station9_intensity_rgb.txt'
+GT_PCL_LABEL_FPATH = DIR + os.sep + 'sem8_labels_training/sg27_station9_intensity_rgb.labels'
 
-GT_PCL_FPATH = 'scratchspace/sg28_station5_xyz_intensity_rgb/sg28_station5_xyz_intensity_rgb.txt'
-PLY_FPATH = 'scratchspace/C_37EZ1_3_2.ply'
 
 if __name__ == '__main__':
-    ps = PointStreamer()
+    ps = PointStreamer(GT_PCL_FPATH, GT_PCL_LABEL_FPATH)
 
-    xyzs, rgbs = ps.read_ply(PLY_FPATH)
+    # xyzs, rgbs = ps.read_ply(PLY_FPATH)
+    # rgbs = utils.z2rgb(xyzs[:, -1])
+    # ps.write_ply(utils.normalize_xyzs(xyzs), rgbs, PLY_FPATH.replace('.ply', '_depth.ply'))
 
-    if rgbs is None:
-        zs_ = xyzs[:, -1]
-        zs = np.clip(zs_, -600, 120)
-        m = zs - zs.min()
-        m = m / m.max()
-        m = np.tile(np.expand_dims(m, -1), [1, 3])
-        rgbs = (m * [0, 255, 0] + (1 - m) * [0, 0, 255]).astype(np.uint8)
-        # import matplotlib.pyplot as plt
-        # plt.hist(zs[np.logical_and(zs > -600, zs < -120)], 100)
-        # plt.show()
-    xyzs = xyzs - xyzs.min(axis=0)
-    xyzs = xyzs / xyzs.max()
-    ps.write_ply(xyzs, rgbs, PLY_FPATH.replace('.ply', '_depth.ply'))
+    data, labels = ps.get_points(stride=1000, normalize_point_locs=True, scale=.15)
+    blend_coeff = 1.
+    xyzs = data[:, :3]
+    xyzs = xyzs + [.084, .142, .017]
+    rgbs = blend_coeff * utils.label_colors[labels] + (1. - blend_coeff) * data[:, 3:]
+    ps.write_ply(xyzs, rgbs)
 
-    # a = ps.get_points()
-    las = pylas.read(LAZ_FPATH)
-    xyzs_ = np.vstack([las['X'], las['Y'], las['Z']]).T
-    ps.write_ply(xyzs_, fpath=LAZ_FPATH.replace('.laz', '.ply'))
+    xyzs = ps.read_laz(LAZ_FPATH)
 
     shift_point = xyzs_.min(axis=0)
     xyzs = xyzs_ - shift_point
