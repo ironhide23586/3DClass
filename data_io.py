@@ -26,39 +26,104 @@ class PlySet:
 
     def __init__(self, ply_fps):
         self.ply_fps = ply_fps
-        self.ply_data = [PlyElem(fp) for fp in self.ply_fps]
+        self.curr_ply_idx = 0
+        self.n_plys = len(ply_fps)
+        self.ply_fnames = [fp.split(os.sep)[-1] for fp in self.ply_fps]
+        self.ply_elems = [PlyElem(fp) for fp in self.ply_fps]
+        self.val_set_idx = self.n_plys - 1
+        k = 0.015210282150733894
+        scale_fnames = ['sg27_station1_intensity_rgb.txt', 'sg27_station2_intensity_rgb.txt',
+                        'sg27_station4_intensity_rgb.txt', 'sg27_station5_intensity_rgb.txt',
+                        'sg27_station9_intensity_rgb.txt', 'sg28_station4_intensity_rgb.txt']
+        self.scale_map = dict(zip(scale_fnames, k / np.array([0.019111323459149544, 0.015210282150733894,
+                                                              0.008469265037180073, 0.009127502076506722,
+                                                              0.006896646850301384, 0.03305238803503553])))
 
-    def match_scales(self):
-        k = 0
+    def match_scales(self, targ_idx=1, dump=False):
+        for i in range(len(self.ply_elems)):
+            if i == targ_idx:
+                continue
+            self.ply_elems[i].rescale(self.scale_map[self.ply_elems[i].fname.replace('.ply', '.txt')])
+            if dump:
+                out_ply_fpath = self.ply_elems[i].fpath.replace('.ply', '-rescaled.ply')
+                if not os.path.exists(out_ply_fpath):
+                    self.ply_elems[i].dump(out_ply_fpath)
+                else:
+                    print(out_ply_fpath, 'exists, skipping....')
+
+    def sample_point_tile(self, mode='train'):
+        if mode == 'train':
+            while self.curr_ply_idx == self.val_set_idx:
+                self.curr_ply_idx += 1
+                self.curr_ply_idx = self.curr_ply_idx % self.n_plys
+            idx = self.curr_ply_idx
+            self.curr_ply_idx = (self.curr_ply_idx + 1) % self.n_plys
+        elif mode == 'val':
+            idx = self.val_set_idx
+        tile_data = self.ply_elems[idx].sample_tile()
+        return tile_data
 
 
 class PlyElem:
 
     def __init__(self, ply_fpath):
-        self.ply_fpath = ply_fpath
-        self.ply_data = utils_.read_ply(self.ply_fpath, raw=True)
+        self.fpath = ply_fpath
+        self.fname = ply_fpath.split(os.sep)[-1]
+        self.data = utils_.read_ply(self.fpath, raw=True)
         self.point_class_color_hashes = None
         self.xyzs = None
+        self.xyz_min = None
+        self.xyz_max = None
         self.rgbs = None
-        self.ply_mmaped = False
-        self.class_pointset_map = {}  # maps class color hashes to their respective point-sets
         self.loaded = False
+
+    def sample_tile(self):
+        self.load()
+        n_points = 0
+        while True:
+            start_x = np.random.uniform(self.xyz_min[0], self.xyz_max[0] - utils_.POINT_TILER_SIDE)
+            end_x = start_x + utils_.POINT_TILER_SIDE
+            start_y = np.random.uniform(self.xyz_min[1], self.xyz_max[1] - utils_.POINT_TILER_SIDE)
+            end_y = start_y + utils_.POINT_TILER_SIDE
+            xs, ys, _ = self.xyzs.T
+            filt = np.logical_and(np.logical_and(np.logical_and(xs >= start_x, xs < end_x), ys >= start_y), ys < end_y)
+            xyzs = self.xyzs[filt]
+            rgbs = self.rgbs[filt]
+            color_hashes = utils_.color2hash(rgbs)
+            filt = np.logical_and(np.logical_and(color_hashes != utils_.excluded_label_hashes[0],
+                                                 color_hashes != utils_.excluded_label_hashes[1]),
+                                  color_hashes != utils_.excluded_label_hashes[2])
+            if filt[filt].shape[0] < 10000:
+                continue
+            xyzs = xyzs[filt]
+            rgbs = rgbs[filt]
+            xyzs = np.floor(xyzs / utils_.GRID_RESOLUTION)
+            xyzs = xyzs - xyzs.min(axis=0)
+            xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
+            xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
+            xyzs_uq = npi.unique(xyzs)
+            i_ = npi.indices(xyzs, xyzs_uq)
+            rgbs = rgbs[i_]
+            xyzs = xyzs_uq
+            break
+        return xyzs, rgbs
 
     def load(self):
         if not self.loaded:
-            self.xyzs, self.rgbs = utils_.parse_plydata(self.ply_data)
+            self.xyzs, self.rgbs = utils_.parse_plydata(self.data)
+            self.xyz_min = self.xyzs.min(axis=0)
+            self.xyz_max = self.xyzs.max(axis=0)
             self.point_class_color_hashes = utils_.color2hash(self.rgbs)
             self.loaded = True
 
     def rescale(self, scale):
         self.load()
         self.xyzs = self.xyzs * scale
-
-    def populate_class_pointset_map(self):
-        for color_hash in utils_.label_color_hashes:
-            self.class_pointset_map[color_hash] = self.xyzs[self.point_class_color_hashes == color_hash]
+        self.xyz_min = self.xyzs.min(axis=0)
+        self.xyz_max = self.xyzs.max(axis=0)
 
     def dump(self, fpath):
+        self.load()
         utils_.write_ply(self.xyzs, fpath, rgbs=self.rgbs)
 
 
@@ -126,12 +191,12 @@ class PointStreamer:
         xyzs_ = data[:, :3]
         if self.translate_const is None:
             self.translate_const = xyzs_.min(axis=0)
-            # print('Translation const ->', self.translate_const)
+            print('Translation const ->', self.translate_const)
         if self.scale_const is None:
             tmp = xyzs_ - self.translate_const
             self.scale_const = 1. / tmp.max()
             print(' |--++', self.pcl_fpath, 'Scaling const ->', self.scale_const, "++--| ")
-            return None, None
+            # return None, None
         if normalize_point_locs:
             xyzs = utils_.normalize_xyzs(xyzs_, scale_const=self.scale_const,
                                          translate_const=self.translate_const) * scale

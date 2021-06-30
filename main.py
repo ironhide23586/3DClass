@@ -15,6 +15,7 @@ Website: https://www.linkedin.com/in/souham/
 import os
 from glob import glob
 
+import utils_
 from data_io import PlySet
 
 DIR = 'scratchspace'
@@ -37,15 +38,18 @@ def convert_gt_to_ply(gt_dir):  # WARNING: Takes a LONG time (╯°□°）╯�
         plyios.append(PlyIO(point_streamers[i]))
     for i in range(n_fpaths):
         plyios[i].dump_ply()
-    k = 0
 
 
 if __name__ == '__main__':
-    convert_gt_to_ply(GT_DIR)
+    # convert_gt_to_ply(GT_DIR)
 
-    ply_fps = glob(GT_DIR + os.sep + '*.ply')
+    ply_fps = glob(GT_DIR + os.sep + '*rgb.ply')
     point_data = PlySet(ply_fps)
     point_data.match_scales()
+    tile_xyzs, tile_rgbs = point_data.sample_point_tile()
+    utils_.write_ply(tile_xyzs, 'tmp.ply', tile_rgbs, stride=1)
+    utils_.points2grid(tile_xyzs, tile_rgbs)
+
     k = 0
 
     # xyzs, rgbs = utils_.read_ply(PLY_FPATH)
