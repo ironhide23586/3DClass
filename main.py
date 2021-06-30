@@ -13,39 +13,57 @@ Website: https://www.linkedin.com/in/souham/
 
 
 import os
+from glob import glob
 
-import numpy as np
-import pylas
-
-from data_io import PointStreamer
-import utils
+from data_io import PlySet
 
 DIR = 'scratchspace'
+GT_DIR = DIR + os.sep + 'training_data'
+
 LAZ_FPATH = DIR + os.sep + 'C_37EZ1_3_2.laz'
 PLY_FPATH = DIR + os.sep + 'C_37EZ1_3_2.ply'
 
-GT_PCL_FPATH = DIR + os.sep + 'sg27_station9_intensity_rgb/sg27_station9_intensity_rgb.txt'
-GT_PCL_LABEL_FPATH = DIR + os.sep + 'sem8_labels_training/sg27_station9_intensity_rgb.labels'
+
+def convert_gt_to_ply(gt_dir):  # WARNING: Takes a LONG time (╯°□°）╯︵ ┻━┻
+    from data_io import PointStreamer, PlyIO
+    all_gt_pcl_fpaths = glob(gt_dir + os.sep + 'raw_data/*.txt')
+    all_gt_label_fpaths = [fp.replace('.txt', '.labels') for fp in all_gt_pcl_fpaths]
+    n_fpaths = len(all_gt_pcl_fpaths)
+    point_streamers = []
+    plyios = []
+    for i in range(n_fpaths):
+        point_streamers.append(PointStreamer(all_gt_pcl_fpaths[i], all_gt_label_fpaths[i]))
+    for i in range(n_fpaths):
+        plyios.append(PlyIO(point_streamers[i]))
+    for i in range(n_fpaths):
+        plyios[i].dump_ply()
+    k = 0
 
 
 if __name__ == '__main__':
-    ps = PointStreamer(GT_PCL_FPATH, GT_PCL_LABEL_FPATH)
+    convert_gt_to_ply(GT_DIR)
 
-    # xyzs, rgbs = ps.read_ply(PLY_FPATH)
-    # rgbs = utils.z2rgb(xyzs[:, -1])
-    # ps.write_ply(utils.normalize_xyzs(xyzs), rgbs, PLY_FPATH.replace('.ply', '_depth.ply'))
+    ply_fps = glob(GT_DIR + os.sep + '*.ply')
+    point_data = PlySet(ply_fps)
+    point_data.match_scales()
+    k = 0
 
-    data, labels = ps.get_points(stride=1000, normalize_point_locs=True, scale=.15)
-    blend_coeff = 1.
-    xyzs = data[:, :3]
-    xyzs = xyzs + [.084, .142, .017]
-    rgbs = blend_coeff * utils.label_colors[labels] + (1. - blend_coeff) * data[:, 3:]
-    ps.write_ply(xyzs, rgbs)
+    # xyzs, rgbs = utils_.read_ply(PLY_FPATH)
+    # rgbs = utils_.z2rgb(xyzs[:, -1])
+    #
+    # xyzs_unique = npi.unique(xyzs)
+    # i_ = npi.indices(xyzs, xyzs_unique)
+    # xyzs = xyzs[i_]
+    # rgbs = rgbs[i_]
+    #
+    # utils_.write_ply(utils_.normalize_xyzs(xyzs), rgbs, PLY_FPATH.replace('.ply', '_depth.ply'))
 
-    xyzs = ps.read_laz(LAZ_FPATH)
 
-    shift_point = xyzs_.min(axis=0)
-    xyzs = xyzs_ - shift_point
-    scale_point = xyzs.max(axis=0)
-    xyzs = xyzs / scale_point
-
+    #
+    # xyzs = ps.read_laz(LAZ_FPATH)
+    #
+    # shift_point = xyzs_.min(axis=0)
+    # xyzs = xyzs_ - shift_point
+    # scale_point = xyzs.max(axis=0)
+    # xyzs = xyzs / scale_point
+    #

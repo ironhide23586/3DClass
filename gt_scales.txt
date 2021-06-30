@@ -1,0 +1,6 @@
+|--++ scratchspace\training_data\raw_data\sg27_station1_intensity_rgb.txt Scaling const -> 0.019111323459149544 ++--| 
+ |--++ scratchspace\training_data\raw_data\sg27_station2_intensity_rgb.txt Scaling const -> 0.015210282150733894 ++--| 
+ |--++ scratchspace\training_data\raw_data\sg27_station4_intensity_rgb.txt Scaling const -> 0.008469265037180073 ++--| 
+ |--++ scratchspace\training_data\raw_data\sg27_station5_intensity_rgb.txt Scaling const -> 0.009127502076506722 ++--| 
+ |--++ scratchspace\training_data\raw_data\sg27_station9_intensity_rgb.txt Scaling const -> 0.006896646850301384 ++--| 
+ |--++ scratchspace\training_data\raw_data\sg28_station4_intensity_rgb.txt Scaling const -> 0.03305238803503553 ++--| 
