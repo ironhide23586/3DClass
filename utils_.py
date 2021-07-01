@@ -11,10 +11,18 @@ Author: Souham Biswas
 Website: https://www.linkedin.com/in/souham/
 """
 
+DIR = 'scratchspace'
+GT_DIR = DIR + '/training_data'
+
+BASE_LR = 1e-4
+NUM_TRAIN_STEPS = 1000000
+LR_EXP_DECAY_POWER = .068
+
 LAZ_SCALE_CONST = 4e-5
 GT_SCALE = .2
 QUANTIZATION_RESOLUTION = .0001
 GT_STRIDE = 10
+BATCHES_PER_EPOCH = 100
 
 MAX_Z = .025
 POINT_TILER_SIDE = .12
@@ -56,6 +64,20 @@ labelname_id_remap = {'man-made-terrain': 0, 'natural-terrain': 0, 'hard-scape':
                       'high-vegetation': 1, 'low-vegetation': 2, 'buildings': 3, 'cars': 4}
 new_labels = ['ground-surface', 'high-vegetation', 'low-vegetation', 'buildings', 'cars']
 colorhash_newid_map = {name_colorhash_map[n]: labelname_id_remap[n] for n in included_labels}
+n_classes = len(new_labels)
+
+
+def force_makedir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+
+def sample_data(point_data):
+    tile_xyzs, tile_rgbs = point_data.sample_tile()
+    labels = rgb2label(tile_rgbs)
+    cxyz = np.array([GRID_W / 2., GRID_H / 2., GRID_W / 2.])
+    tile_xyzs_normalized = (tile_xyzs - cxyz) / cxyz
+    return np.expand_dims(tile_xyzs_normalized, 0), np.expand_dims(labels, 0)
 
 
 def z2rgb(zs_, min_z=-600, max_z=120):
@@ -65,6 +87,13 @@ def z2rgb(zs_, min_z=-600, max_z=120):
     m = np.tile(np.expand_dims(m, -1), [1, 3])
     rgbs = (m * [0, 255, 0] + (1 - m) * [0, 0, 255]).astype(np.uint8)
     return rgbs
+
+
+def rgb2label(tile_rgbs):
+    labels = color2hash(tile_rgbs)
+    for h in colorhash_newid_map:
+        labels[labels == h] = colorhash_newid_map[h]
+    return labels
 
 
 def points2grid(xyzs, rgbs=None):

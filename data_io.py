@@ -50,16 +50,9 @@ class PlySet:
                 else:
                     print(out_ply_fpath, 'exists, skipping....')
 
-    def sample_tile(self, mode='train'):
-        if mode == 'train':
-            while self.curr_ply_idx == self.val_set_idx:
-                self.curr_ply_idx += 1
-                self.curr_ply_idx = self.curr_ply_idx % self.n_plys
-            idx = self.curr_ply_idx
-            self.curr_ply_idx = (self.curr_ply_idx + 1) % self.n_plys
-        elif mode == 'val':
-            idx = self.val_set_idx
-        tile_data = self.ply_elems[idx].sample_tile()
+    def sample_tile(self):
+        tile_data = self.ply_elems[self.curr_ply_idx].sample_tile()
+        self.curr_ply_idx = (self.curr_ply_idx + 1) % self.n_plys
         return tile_data
 
 
@@ -107,7 +100,6 @@ class PlyElem:
             i_ = npi.indices(xyzs, xyzs_uq)
             rgbs = rgbs[i_]
             xyzs = xyzs_uq
-
             break
         return xyzs, rgbs
 
