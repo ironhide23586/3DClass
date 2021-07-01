@@ -79,7 +79,6 @@ class PlyElem:
 
     def sample_tile(self):
         self.load()
-        n_points = 0
         while True:
             start_x = np.random.uniform(self.xyz_min[0], self.xyz_max[0] - utils_.POINT_TILER_SIDE)
             end_x = start_x + utils_.POINT_TILER_SIDE
@@ -97,6 +96,7 @@ class PlyElem:
                 continue
             xyzs = xyzs[filt]
             rgbs = rgbs[filt]
+
             xyzs = np.floor(xyzs / utils_.GRID_RESOLUTION)
             xyzs = xyzs - xyzs.min(axis=0)
             xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
@@ -105,6 +105,7 @@ class PlyElem:
             i_ = npi.indices(xyzs, xyzs_uq)
             rgbs = rgbs[i_]
             xyzs = xyzs_uq
+
             break
         return xyzs, rgbs
 
@@ -124,7 +125,7 @@ class PlyElem:
 
     def dump(self, fpath):
         self.load()
-        utils_.write_ply(self.xyzs, fpath, rgbs=self.rgbs)
+        utils_.write_ply(fpath, self.xyzs, rgbs_=self.rgbs)
 
 
 class PointStreamer:
