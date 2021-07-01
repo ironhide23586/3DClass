@@ -13,13 +13,14 @@ Website: https://www.linkedin.com/in/souham/
 
 import os
 from datetime import datetime
+# from multiprocessing import cpu_count
 
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 import numpy as np
 
 from pointnet.tnet import TNet
-from pointnet.utils import custom_conv, custom_dense
+from pointnet.utils import custom_conv
 import utils_
 from data_io import PlySet
 
@@ -55,14 +56,15 @@ class PointNet:
         save_fpath_dir = os.sep.join([utils_.DIR, 'trained_models'])
         utils_.force_makedir(save_fpath_dir)
         save_fpath = os.sep.join([save_fpath_dir,
-                                  'aerial-pointnet-weights.{epoch:02d}-{precision:.2f}-{recall:.2f}.hdf5'])
+                                  'aerial-pointnet-weights.{epoch:02d}-{loss:.2f}-{val_loss:.2f}.hdf5'])
         saver_keras = tf.keras.callbacks.ModelCheckpoint(save_fpath, save_freq='epoch', monitor='loss',
                                                          save_weights_only=True, save_best_only=False)
         logdir = os.sep.join([utils_.DIR, 'logs'])
         utils_.force_makedir(logdir)
         logdir += os.sep + datetime.now().strftime("%Y%m%d-%H%M%S")
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, write_images=True,
-                                                              histogram_freq=1, update_freq=20)
+                                                              histogram_freq=1,
+                                                              update_freq=utils_.UPDATE_TENSORBOARD_EVERY_N_STEPS)
         num_epochs = int(np.round(utils_.NUM_TRAIN_STEPS / utils_.BATCHES_PER_EPOCH))
         self.model.fit(self.keras_train_data, callbacks=[lr_sc, saver_keras, tensorboard_callback],
                        steps_per_epoch=utils_.BATCHES_PER_EPOCH, epochs=num_epochs,
