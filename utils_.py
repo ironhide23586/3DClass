@@ -11,7 +11,7 @@ Author: Souham Biswas
 Website: https://www.linkedin.com/in/souham/
 """
 
-LAZ_SCALE_CONST = 3.3333333333333333e-05
+LAZ_SCALE_CONST = 4e-5
 GT_SCALE = .2
 QUANTIZATION_RESOLUTION = .0001
 GT_STRIDE = 10
@@ -67,16 +67,17 @@ def z2rgb(zs_, min_z=-600, max_z=120):
     return rgbs
 
 
-def points2grid(xyzs, rgbs):
+def points2grid(xyzs, rgbs=None):
     xs, ys, zs = xyzs.T.astype(np.int)
     canvas_in = np.zeros([GRID_H, GRID_W, GRID_D]).astype(np.float)
     canvas_in[ys, xs, zs] = 1.
-
-    labels = color2hash(rgbs)
-    for h in colorhash_newid_map:
-        labels[labels == h] = colorhash_newid_map[h]
-    canvas_label = np.zeros([GRID_H, GRID_W, GRID_D]).astype(np.int)
-    canvas_label[ys, xs, zs] = labels
+    canvas_label = None
+    if rgbs is not None:
+        labels = color2hash(rgbs)
+        for h in colorhash_newid_map:
+            labels[labels == h] = colorhash_newid_map[h]
+        canvas_label = np.zeros([GRID_H, GRID_W, GRID_D]).astype(np.int)
+        canvas_label[ys, xs, zs] = labels
     return canvas_in, canvas_label
 
 
