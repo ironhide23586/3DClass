@@ -41,7 +41,7 @@ if __name__ == '__main__':
     tile_xyzs = laz_data.sample_tile()
     utils_.write_ply('tmp_laz.ply', tile_xyzs, utils_.z2rgb(tile_xyzs[:, -1]), stride=1)
     grid_x_in, _ = utils_.points2grid(tile_xyzs)
-
+ 
     #
     # xyzs = ps.read_laz(LAZ_FPATH)
     #
