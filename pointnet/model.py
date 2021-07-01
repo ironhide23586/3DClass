@@ -49,6 +49,10 @@ class PointNet:
         self.val_point_data = None
         self.keras_val_data = None
 
+    def load_weights(self, fpath):
+        print('---------> Loading weights from', fpath)
+        self.model.load_weights(fpath)
+
     def train(self):
         exps_dec = tf.keras.optimizers.schedules.ExponentialDecay(utils_.BASE_LR, utils_.NUM_TRAIN_STEPS,
                                                                   utils_.LR_EXP_DECAY_POWER)
@@ -56,7 +60,7 @@ class PointNet:
         save_fpath_dir = os.sep.join([utils_.DIR, 'trained_models'])
         utils_.force_makedir(save_fpath_dir)
         save_fpath = os.sep.join([save_fpath_dir,
-                                  'aerial-pointnet-weights.{epoch:02d}-{loss:.2f}-{val_loss:.2f}.hdf5'])
+                                  'aerial-pointnet-weights.{epoch:02d}-{loss:.2f}.hdf5'])
         saver_keras = tf.keras.callbacks.ModelCheckpoint(save_fpath, save_freq='epoch', monitor='loss',
                                                          save_weights_only=True, save_best_only=False)
         logdir = os.sep.join([utils_.DIR, 'logs'])
@@ -67,8 +71,8 @@ class PointNet:
                                                               update_freq=utils_.UPDATE_TENSORBOARD_EVERY_N_STEPS)
         num_epochs = int(np.round(utils_.NUM_TRAIN_STEPS / utils_.BATCHES_PER_EPOCH))
         self.model.fit(self.keras_train_data, callbacks=[lr_sc, saver_keras, tensorboard_callback],
-                       steps_per_epoch=utils_.BATCHES_PER_EPOCH, epochs=num_epochs,
-                       validation_data=self.keras_val_data)
+                       steps_per_epoch=utils_.BATCHES_PER_EPOCH, epochs=num_epochs)
+                       # validation_data=self.keras_val_data)
 
     def load_data(self, train_fps, val_fps):
         self.keras_train_data = KerasData(train_fps)

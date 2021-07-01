@@ -32,6 +32,7 @@ if __name__ == '__main__':
 
     pnet = PointNet()
     pnet.load_data(ply_fps[:-1], [ply_fps[-1]])
+    pnet.load_weights(utils_.DIR + '/trained_models/aerial-pointnet-weights.06-1.47-14.13.hdf5')
     pnet.train()
 
 
