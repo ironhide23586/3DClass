@@ -91,11 +91,10 @@ class PlyElem:
                 continue
             xyzs = xyzs[filt]
             rgbs = rgbs[filt]
-
-            xyzs = np.floor(xyzs / utils_.GRID_RESOLUTION)
+            # xyzs = np.floor(xyzs / utils_.GRID_RESOLUTION)
             xyzs = xyzs - xyzs.min(axis=0)
-            xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
-            xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
+            # xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
+            # xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
             xyzs_uq = npi.unique(xyzs)
             i_ = npi.indices(xyzs, xyzs_uq)
             rgbs = rgbs[i_]
@@ -120,7 +119,7 @@ class PlyElem:
 
     def dump(self, fpath):
         self.load()
-        utils_.write_ply(fpath, self.xyzs, rgbs_=self.rgbs)
+        utils_.write_ply(fpath, self.xyzs, self.rgbs)
 
 
 class LAZElem:
@@ -137,46 +136,53 @@ class LAZElem:
         self.num_xy_tiles = None
         self.start_tile_x = 0
         self.start_tile_y = 0
+        # self.t_vec = None
 
     def load(self):
         if not self.loaded:
             self.xyzs = utils_.read_laz(self.fpath)
-            self.xyzs = np.floor(utils_.normalize_xyzs(self.xyzs * utils_.LAZ_SCALE_CONST,
-                                                       scale_const=1. / utils_.GRID_RESOLUTION))
-            self.xyzs = npi.unique(self.xyzs)
+            # self.xyzs = np.floor(utils_.normalize_xyzs(self.xyzs * utils_.LAZ_SCALE_CONST,
+            #                                            scale_const=1. / utils_.GRID_RESOLUTION))
+            self.xyzs = utils_.normalize_xyzs(self.xyzs, scale_const=utils_.LAZ_SCALE_CONST)
+            # self.xyzs = npi.unique(self.xyzs)
             self.xs, self.ys, _ = self.xyzs.T
             self.xyz_max = self.xyzs.max(axis=0)
-            self.num_xy_tiles = np.ceil(self.xyz_max[:2] / [utils_.GRID_W, utils_.GRID_H]).astype(np.int)
+            self.num_xy_tiles = np.ceil(self.xyz_max[:2] / [utils_.POINT_TILER_SIDE,
+                                                            utils_.POINT_TILER_SIDE]).astype(np.int)
             self.loaded = True
 
-    def sample_tile(self):
+    def sample_tile(self, start_xy=None):
         self.load()
-        if self.start_tile_x >= self.num_xy_tiles[0] or self.start_tile_y > self.num_xy_tiles[1]:
+        if start_xy is None:
+            start_tile_x, start_tile_y = self.start_tile_x, self.start_tile_y
+        else:
+            start_tile_x, start_tile_y = start_xy
+
+        if start_tile_x >= self.num_xy_tiles[0] or start_tile_y > self.num_xy_tiles[1]:
             print('(☞ﾟヮﾟ)☞ LAZ file exhausted! ☜(ﾟヮﾟ☜)')
             return None
-        start_x = self.start_tile_x * utils_.GRID_W
-        end_x = start_x + utils_.GRID_W
-        start_y = self.start_tile_y * utils_.GRID_H
-        end_y = start_y + utils_.GRID_H
 
-        print(self.start_tile_x, self.start_tile_y)
-        print(start_x, end_x, start_y, end_y)
-        print('------------------\n')
+        start_x = start_tile_x * utils_.POINT_TILER_SIDE
+        end_x = start_x + utils_.POINT_TILER_SIDE
+        start_y = start_tile_y * utils_.POINT_TILER_SIDE
+        end_y = start_y + utils_.POINT_TILER_SIDE
 
         filt = np.logical_and(np.logical_and(np.logical_and(self.xs >= start_x, self.xs < end_x),
                                              self.ys >= start_y), self.ys < end_y)
         xyzs = self.xyzs[filt]
-        xyzs = xyzs - xyzs.min(axis=0)
-        xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
-        xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
-        tile = npi.unique(xyzs)
+        t_vec = xyzs.min(axis=0)
+        xyzs = xyzs - t_vec
+        # xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
+        # xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
+        # tile = npi.unique(xyzs)
 
-        if (self.start_tile_x + 1) >= self.num_xy_tiles[0]:
-            self.start_tile_y += 1
-            self.start_tile_x = 0
-        else:
-            self.start_tile_x += 1
-        return tile
+        if start_xy is None:
+            if (self.start_tile_x + 1) >= self.num_xy_tiles[0]:
+                self.start_tile_y += 1
+                self.start_tile_x = 0
+            else:
+                self.start_tile_x += 1
+        return xyzs, t_vec, None
 
 
 class PointStreamer:

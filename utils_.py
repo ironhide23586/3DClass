@@ -24,7 +24,7 @@ LAZ_SCALE_CONST = 4e-5
 GT_SCALE = .2
 QUANTIZATION_RESOLUTION = .0001
 GT_STRIDE = 10
-BATCHES_PER_EPOCH = 50
+BATCHES_PER_EPOCH = 4
 
 MAX_Z = .025
 POINT_TILER_SIDE = .12
@@ -65,6 +65,7 @@ excluded_label_hashes = [name_colorhash_map[n] for n in excluded_labels]
 labelname_id_remap = {'man-made-terrain': 0, 'natural-terrain': 0, 'hard-scape': 0,
                       'high-vegetation': 1, 'low-vegetation': 2, 'buildings': 3, 'cars': 4}
 new_labels = ['ground-surface', 'high-vegetation', 'low-vegetation', 'buildings', 'cars']
+new_colors = np.array([(244, 35, 231), (106, 142, 35), (190, 153, 153), (69, 69, 69), (0, 0, 142)])
 colorhash_newid_map = {name_colorhash_map[n]: labelname_id_remap[n] for n in included_labels}
 n_classes = len(new_labels)
 
@@ -74,12 +75,50 @@ def force_makedir(dir):
         os.makedirs(dir)
 
 
-def sample_data(point_data):
-    tile_xyzs, tile_rgbs = point_data.sample_tile()
-    labels = rgb2label(tile_rgbs)
-    cxyz = np.array([GRID_W / 2., GRID_H / 2., GRID_W / 2.])
-    tile_xyzs_normalized = (tile_xyzs - cxyz) / cxyz
-    return np.expand_dims(tile_xyzs_normalized, 0), np.expand_dims(labels, 0)
+def sample_data(point_data, random_transform=False):
+    ret = point_data.sample_tile()
+    if ret is None:
+        return None, None
+    if len(ret) == 2:
+        tile_xyzs, tile_rgbs = ret
+        labels = np.expand_dims(rgb2label(tile_rgbs), 0)
+    else:
+        tile_xyzs, _, _ = ret
+        labels = None
+    xyzs = xyz_preprocess(tile_xyzs)
+    if random_transform:  # random 3D rotation
+        angle_x, angle_y, angle_z = np.random.uniform(0, 360, size=3)
+        R = get_rot_mat(angle_x, angle_y, angle_z)
+        xyzs = np.dot(R, xyzs.T).T
+    tile_xyzs_normalized = np.expand_dims(xyzs, 0)
+    return tile_xyzs_normalized, labels
+
+
+def get_rot_mat(x_angle_deg, y_angle_deg, z_angle_deg):
+    x_angle_rad = np.deg2rad(x_angle_deg)
+    y_angle_rad = np.rad2deg(y_angle_deg)
+    z_angle_rad = np.rad2deg(z_angle_deg)
+    cos_x = np.cos(x_angle_rad)
+    sin_x = np.sin(x_angle_rad)
+    cos_y = np.cos(y_angle_rad)
+    sin_y = np.sin(y_angle_rad)
+    cos_z = np.cos(z_angle_rad)
+    sin_z = np.sin(z_angle_rad)
+    # x-phi, y-theta, z-quanta
+    R = np.array([[cos_y * cos_z, (cos_x * sin_z) + (sin_x * sin_y * cos_z), (sin_x * sin_z) - (cos_x * sin_y * cos_z)],
+                  [-cos_y * sin_z, (cos_x * cos_z) - (sin_x * sin_y * sin_z), (sin_x * cos_z) + (cos_x * sin_y * cos_z)],
+                  [sin_y, -sin_x * cos_y, cos_x * cos_y]])
+    return R
+
+
+def xyz_preprocess(xyzs_, translate=False):
+    if translate:
+        xyzs = xyzs_ - xyzs_.min(axis=0)
+    else:
+        xyzs = xyzs_
+    # cxyz = np.array([GRID_W / 2., GRID_H / 2., GRID_W / 2.])
+    cxyz = np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2.])
+    return (xyzs - cxyz) / cxyz
 
 
 def z2rgb(zs_, min_z=-600, max_z=120):
@@ -137,7 +176,12 @@ def read_ply(fpath, raw=False):
     return xyzs, rgbs
 
 
-def write_ply(out_ply_fpath, xyzs_, rgbs_=None, stride=1):
+def write_ply(out_ply_fpath, xyzs__, rgbs__=None, stride=1):
+    xyzs_ = np.squeeze(xyzs__)
+    rgbs_ = rgbs__
+    rgbs = rgbs_
+    if rgbs__ is not None:
+        rgbs_ = np.squeeze(rgbs__)
     if stride > 1:
         idx = np.arange(0, xyzs_.shape[0], stride)
         xyzs = xyzs_[idx]
@@ -145,7 +189,8 @@ def write_ply(out_ply_fpath, xyzs_, rgbs_=None, stride=1):
             rgbs = rgbs_[idx]
     else:
         xyzs = xyzs_
-        rgbs = rgbs_
+        if rgbs_ is not None:
+            rgbs = rgbs_
     print('Writing points to', out_ply_fpath, ' 👉 Number of points =', xyzs.shape[0])
     if rgbs is not None:
         data = np.array(list(map(tuple, np.hstack([xyzs, rgbs]))),

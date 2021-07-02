@@ -3,6 +3,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Layer, Conv2D, BatchNormalization, Dense, Dropout
+
+
 # from models.pointnet_cls_F import custom_dense,custom_conv
 # from custommodel import CustomModel
 
@@ -14,13 +16,13 @@ class TNet(Layer):
         self.conv0 = CustomConv(64, (1, 1), strides=(1, 1), bn_momentum=bn_momentum)
         self.conv1 = CustomConv(128, (1, 1), strides=(1, 1), bn_momentum=bn_momentum)
         self.conv2 = CustomConv(1024, (1, 1), strides=(1, 1), bn_momentum=bn_momentum)
-        self.fc0 = CustomDense(512, activation=tf.nn.relu, apply_bn=True, bn_momentum=bn_momentum)
-        self.fc1 = CustomDense(256, activation=tf.nn.relu, apply_bn=True, bn_momentum=bn_momentum)
+        self.fc0 = CustomDense(512, activation=tf.nn.relu, apply_bn=False, bn_momentum=bn_momentum)
+        self.fc1 = CustomDense(256, activation=tf.nn.relu, apply_bn=False, bn_momentum=bn_momentum)
 
     def build(self, input_shape):
         self.K = input_shape[-1]
 
-        self.w = self.add_weight(shape=(256, self.K**2), initializer=tf.zeros_initializer,
+        self.w = self.add_weight(shape=(256, self.K ** 2), initializer=tf.zeros_initializer,
                                  trainable=True, name='w')
         self.b = self.add_weight(shape=(self.K, self.K), initializer=tf.zeros_initializer,
                                  trainable=True, name='b')
@@ -30,26 +32,26 @@ class TNet(Layer):
         self.b = tf.math.add(self.b, I)
 
     def call(self, x, training=None):
-        input_x = x                                                     # BxNxK
+        input_x = x  # BxNxK
 
         # Embed to higher dim
-        x = tf.expand_dims(input_x, axis=2)                             # BxNx1xK
+        x = tf.expand_dims(input_x, axis=2)  # BxNx1xK
         x = self.conv0(x, training=training)
         x = self.conv1(x, training=training)
         x = self.conv2(x, training=training)
-        x = tf.squeeze(x, axis=2)                                       # BxNx1024
+        x = tf.squeeze(x, axis=2)  # BxNx1024
 
         # Global features
-        x = tf.reduce_max(x, axis=1)                                    # Bx1024
+        x = tf.reduce_max(x, axis=1)  # Bx1024
 
         # Fully-connected layers
-        x = self.fc0(x, training=training)                              # Bx512
-        x = self.fc1(x, training=training)                              # Bx256
+        x = self.fc0(x, training=training)  # Bx512
+        x = self.fc1(x, training=training)  # Bx256
 
         # WHY not Bx256 --> BxK^2 using a FC layer?-yc
         # Convert to KxK matrix to matmul with input
-        x = tf.expand_dims(x, axis=1)                                   # Bx1x256
-        x = tf.matmul(x, self.w)                                        # Bx1xK^2
+        x = tf.expand_dims(x, axis=1)  # Bx1x256
+        x = tf.matmul(x, self.w)  # Bx1xK^2
         x = tf.squeeze(x, axis=1)
         x = tf.reshape(x, (-1, self.K, self.K))
 
@@ -74,6 +76,7 @@ class TNet(Layer):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
 
 class CustomConv(Layer):
     def __init__(self, filters, kernel_size, strides, padding='valid', activation=None,
@@ -118,6 +121,7 @@ class CustomConv(Layer):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
 
 class CustomDense(Layer):
     def __init__(self, units, activation=None, apply_bn=False, bn_momentum=0.99, **kwargs):
