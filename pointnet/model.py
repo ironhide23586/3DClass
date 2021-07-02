@@ -45,10 +45,10 @@ class PointNet:
         self.bn_momentum = 0.99
         self.model = self.make_model()
         if mode == 'train':
-            # self.model.compile('adam', loss='sparse_categorical_crossentropy',
-            #                    metrics=['sparse_categorical_accuracy'])
-            self.model.compile('adam', loss=self.loss_func,
+            self.model.compile('adam', loss='sparse_categorical_crossentropy',
                                metrics=['sparse_categorical_accuracy'])
+            # self.model.compile('adam', loss=self.loss_func,
+            #                    metrics=['sparse_categorical_accuracy'])
         self.keras_train_data = None
         self.val_point_data = None
         self.train_point_data = None
@@ -154,7 +154,7 @@ class PointNet:
         x = custom_conv(x, 128)
         x = custom_conv(x, 64)
         x = custom_conv(x, 8)
-        output = custom_conv(x, utils_.n_classes, activation='sigmoid')
+        output = custom_conv(x, utils_.n_classes, activation='softmax')
 
         # build the model
         model = tf.keras.models.Model(inputs=input, outputs=output)
