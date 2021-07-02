@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     pnet = PointNet(mode='train')
     pnet.load_data(ply_fps[:-1], [ply_fps[-1]])
-    pnet.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.803-0.36.hdf5')
+    pnet.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.16-0.45.hdf5')
 
     # from sklearn.metrics import accuracy_score, precision_recall_fscore_support
     #

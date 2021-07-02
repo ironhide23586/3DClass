@@ -154,7 +154,7 @@ class PointNet:
         x = custom_conv(x, 128)
         x = custom_conv(x, 64)
         x = custom_conv(x, 8)
-        output = custom_conv(x, utils_.n_classes, activation='softmax')
+        output = custom_conv(x, utils_.n_classes, activation='sigmoid')
 
         # build the model
         model = tf.keras.models.Model(inputs=input, outputs=output)
