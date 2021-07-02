@@ -93,7 +93,7 @@ class PointNet:
         num_epochs = int(np.round(utils_.NUM_TRAIN_STEPS / utils_.BATCHES_PER_EPOCH))
         self.model.fit(self.keras_train_data, callbacks=[lr_sc, saver_keras, tensorboard_callback],
                        steps_per_epoch=utils_.BATCHES_PER_EPOCH, epochs=num_epochs,
-                       validation_data=self.keras_val_data)
+                       validation_data=self.keras_val_data, use_multiprocessing=True)
 
     def load_data(self, train_fps, val_fps):
         self.keras_train_data = KerasData(train_fps)
