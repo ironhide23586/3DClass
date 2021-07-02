@@ -100,6 +100,11 @@ class PlyElem:
             rgbs = rgbs[i_]
             xyzs = xyzs_uq
             break
+        if xyzs.shape[0] > 30000:
+            s = int(np.ceil(xyzs.shape[0] / 30000))
+            idx = np.arange(0, xyzs.shape[0], s)
+            xyzs = xyzs[idx]
+            rgbs = rgbs[idx]
         return xyzs, rgbs
 
     def load(self):
