@@ -51,6 +51,7 @@ class PointNet:
                                metrics=['sparse_categorical_accuracy'])
         self.keras_train_data = None
         self.val_point_data = None
+        self.train_point_data = None
         self.keras_val_data = None
 
     def loss_func(self, y_true, y_pred):
@@ -96,9 +97,11 @@ class PointNet:
                        validation_data=self.keras_val_data, use_multiprocessing=True)
 
     def load_data(self, train_fps, val_fps):
-        self.keras_train_data = KerasData(train_fps)
+        # self.keras_train_data = KerasData(train_fps)
+        self.train_point_data = PlySet(train_fps)
         self.val_point_data = PlySet(val_fps)
         self.keras_val_data = tf.data.Dataset.from_generator(self.get_val_gen, (tf.float32, tf.int32))
+        self.keras_train_data = tf.data.Dataset.from_generator(self.get_train_gen, (tf.float32, tf.int32))
 
     def infer(self, xyzs_, rescale_scores=False):
         if len(xyzs_.shape) == 3:
@@ -113,6 +116,10 @@ class PointNet:
     def get_val_gen(self):
         for _ in range(utils_.BATCHES_PER_EPOCH):
             yield utils_.sample_data(self.val_point_data, random_transform=False)
+
+    def get_train_gen(self):
+        for _ in range(utils_.BATCHES_PER_EPOCH):
+            yield utils_.sample_data(self.val_point_data, random_transform=True)
 
     def make_model(self):
         # (1) input
