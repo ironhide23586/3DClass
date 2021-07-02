@@ -72,9 +72,9 @@ class PointNet:
         self.model.load_weights(fpath)
 
     def train(self):
-        # x, y = self.keras_train_data.__getitem__(0)
-        # rgbs = utils_.new_colors[y[0]]
-        # utils_.write_ply('tmp_.ply', x, rgbs)
+        x, y = utils_.sample_data(self.train_point_data, random_transform=True)
+        rgbs = utils_.new_colors[y[0]]
+        utils_.write_ply('tmp_.ply', x, rgbs)
 
         exps_dec = tf.keras.optimizers.schedules.ExponentialDecay(utils_.BASE_LR, utils_.NUM_TRAIN_STEPS,
                                                                   utils_.LR_EXP_DECAY_POWER)
@@ -114,12 +114,12 @@ class PointNet:
             return ret
 
     def get_val_gen(self):
-        for _ in range(utils_.BATCHES_PER_EPOCH):
+        for _ in range(10):
             yield utils_.sample_data(self.val_point_data, random_transform=False)
 
     def get_train_gen(self):
         for _ in range(utils_.NUM_TRAIN_STEPS):
-            yield utils_.sample_data(self.val_point_data, random_transform=True)
+            yield utils_.sample_data(self.train_point_data, random_transform=True)
 
     def make_model(self):
         # (1) input

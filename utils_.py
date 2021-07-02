@@ -117,8 +117,9 @@ def xyz_preprocess(xyzs_, translate=False):
     else:
         xyzs = xyzs_
     # cxyz = np.array([GRID_W / 2., GRID_H / 2., GRID_W / 2.])
-    cxyz = np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2.])
-    return (xyzs - cxyz) / cxyz
+    c = GRID_D / GRID_W
+    cxyz = np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., 0.])
+    return (xyzs - cxyz) / np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., c * POINT_TILER_SIDE / 2.])
 
 
 def z2rgb(zs_, min_z=-600, max_z=120):
