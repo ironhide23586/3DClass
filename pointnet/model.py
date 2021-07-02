@@ -30,7 +30,7 @@ class KerasData(Sequence):
     def __init__(self, ply_fps):
         super().__init__()
         self.point_data = PlySet(ply_fps)
-        self.point_data.match_scales()
+        # self.point_data.match_scales()
 
     def __len__(self):
         return utils_.BATCHES_PER_EPOCH
@@ -72,9 +72,9 @@ class PointNet:
         self.model.load_weights(fpath)
 
     def train(self):
-        x, y = utils_.sample_data(self.train_point_data, random_transform=True)
-        rgbs = utils_.new_colors[y[0]]
-        utils_.write_ply('tmp_.ply', x, rgbs)
+        # x, y = utils_.sample_data(self.val_point_data, random_transform=False)
+        # rgbs = utils_.new_colors[y[0]]
+        # utils_.write_ply('tmp_.ply', x, rgbs)
 
         exps_dec = tf.keras.optimizers.schedules.ExponentialDecay(utils_.BASE_LR, utils_.NUM_TRAIN_STEPS,
                                                                   utils_.LR_EXP_DECAY_POWER)

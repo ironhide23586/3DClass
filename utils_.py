@@ -69,6 +69,14 @@ new_colors = np.array([(244, 35, 231), (106, 142, 35), (190, 153, 153), (69, 69,
 colorhash_newid_map = {name_colorhash_map[n]: labelname_id_remap[n] for n in included_labels}
 n_classes = len(new_labels)
 
+k = 0.015210282150733894
+scale_fnames = ['sg27_station1_intensity_rgb.txt', 'sg27_station2_intensity_rgb.txt',
+                'sg27_station4_intensity_rgb.txt', 'sg27_station5_intensity_rgb.txt',
+                'sg27_station9_intensity_rgb.txt', 'sg28_station4_intensity_rgb.txt']
+scale_map = dict(zip(scale_fnames, k / np.array([0.019111323459149544, 0.015210282150733894,
+                                                 0.008469265037180073, 0.009127502076506722,
+                                                 0.006896646850301384, 0.03305238803503553])))
+
 
 def force_makedir(dir):
     if not os.path.exists(dir):
@@ -87,28 +95,39 @@ def sample_data(point_data, random_transform=False):
         labels = None
     xyzs = xyz_preprocess(tile_xyzs)
     if random_transform:  # random 3D rotation
-        angle_x, angle_y, angle_z = np.random.uniform(0, 360, size=3)
-        R = get_rot_mat(angle_x, angle_y, angle_z)
+        # angle_x, angle_y, angle_z = np.random.uniform(0, 360, size=3)
+        quaternion = np.random.uniform(0, 1, size=4)
+        R = get_rot_mat(quaternion)
         xyzs = np.dot(R, xyzs.T).T
     tile_xyzs_normalized = np.expand_dims(xyzs, 0)
     return tile_xyzs_normalized, labels
 
 
-def get_rot_mat(x_angle_deg, y_angle_deg, z_angle_deg):
-    x_angle_rad = np.deg2rad(x_angle_deg)
-    y_angle_rad = np.rad2deg(y_angle_deg)
-    z_angle_rad = np.rad2deg(z_angle_deg)
-    cos_x = np.cos(x_angle_rad)
-    sin_x = np.sin(x_angle_rad)
-    cos_y = np.cos(y_angle_rad)
-    sin_y = np.sin(y_angle_rad)
-    cos_z = np.cos(z_angle_rad)
-    sin_z = np.sin(z_angle_rad)
-    # x-phi, y-theta, z-quanta
-    R = np.array([[cos_y * cos_z, (cos_x * sin_z) + (sin_x * sin_y * cos_z), (sin_x * sin_z) - (cos_x * sin_y * cos_z)],
-                  [-cos_y * sin_z, (cos_x * cos_z) - (sin_x * sin_y * sin_z), (sin_x * cos_z) + (cos_x * sin_y * cos_z)],
-                  [sin_y, -sin_x * cos_y, cos_x * cos_y]])
-    return R
+# def get_rot_mat(x_angle_deg, y_angle_deg, z_angle_deg):
+#     x_angle_rad = np.deg2rad(x_angle_deg)
+#     y_angle_rad = np.rad2deg(y_angle_deg)
+#     z_angle_rad = np.rad2deg(z_angle_deg)
+#     cos_x = np.cos(x_angle_rad)
+#     sin_x = np.sin(x_angle_rad)
+#     cos_y = np.cos(y_angle_rad)
+#     sin_y = np.sin(y_angle_rad)
+#     cos_z = np.cos(z_angle_rad)
+#     sin_z = np.sin(z_angle_rad)
+#     # x-phi, y-theta, z-quanta
+#     R = np.array([[cos_y * cos_z, (cos_x * sin_z) + (sin_x * sin_y * cos_z), (sin_x * sin_z) - (cos_x * sin_y * cos_z)],
+#                   [-cos_y * sin_z, (cos_x * cos_z) - (sin_x * sin_y * sin_z),
+#                    (sin_x * cos_z) + (cos_x * sin_y * cos_z)],
+#                   [sin_y, -sin_x * cos_y, cos_x * cos_y]])
+#     return R
+
+
+def get_rot_mat(quaternion_):
+    quaternion = quaternion_ / np.linalg.norm(quaternion_)
+    a, b, c, d = quaternion
+    rotation_matrix = np.array([[2 * b * c - 2 * a * d, 2 * a ** 2 - 1 + 2 * c ** 2, 2 * c * d + 2 * a * b],
+                                [2 * b * d + 2 * a * c, 2 * c * d - 2 * a * b, 2 * a ** 2 - 1 + 2 * d ** 2],
+                                [2 * a ** 2 - 1 + 2 * b ** 2, 2 * b * c + 2 * a * d, 2 * b * d - 2 * a * c]])
+    return rotation_matrix
 
 
 def xyz_preprocess(xyzs_, translate=False):
@@ -118,7 +137,7 @@ def xyz_preprocess(xyzs_, translate=False):
         xyzs = xyzs_
     # cxyz = np.array([GRID_W / 2., GRID_H / 2., GRID_W / 2.])
     c = GRID_D / GRID_W
-    cxyz = np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., 0.])
+    cxyz = np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., xyzs[:, -1].min()])
     return (xyzs - cxyz) / np.array([POINT_TILER_SIDE / 2., POINT_TILER_SIDE / 2., c * POINT_TILER_SIDE / 2.])
 
 

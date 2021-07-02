@@ -30,25 +30,22 @@ class PlySet:
         self.ply_fnames = [fp.split(os.sep)[-1] for fp in self.ply_fps]
         self.ply_elems = [PlyElem(fp) for fp in self.ply_fps]
         self.val_set_idx = self.n_plys - 1
-        k = 0.015210282150733894
-        scale_fnames = ['sg27_station1_intensity_rgb.txt', 'sg27_station2_intensity_rgb.txt',
-                        'sg27_station4_intensity_rgb.txt', 'sg27_station5_intensity_rgb.txt',
-                        'sg27_station9_intensity_rgb.txt', 'sg28_station4_intensity_rgb.txt']
-        self.scale_map = dict(zip(scale_fnames, k / np.array([0.019111323459149544, 0.015210282150733894,
-                                                              0.008469265037180073, 0.009127502076506722,
-                                                              0.006896646850301384, 0.03305238803503553])))
+        # self.scales_matched = False
+        # self.match_scales()
 
-    def match_scales(self, targ_idx=1, dump=False):
-        for i in range(len(self.ply_elems)):
-            if i == targ_idx:
-                continue
-            self.ply_elems[i].rescale(self.scale_map[self.ply_elems[i].fname.replace('.ply', '.txt')])
-            if dump:
-                out_ply_fpath = self.ply_elems[i].fpath.replace('.ply', '-rescaled.ply')
-                if not os.path.exists(out_ply_fpath):
-                    self.ply_elems[i].dump(out_ply_fpath)
-                else:
-                    print(out_ply_fpath, 'exists, skipping....')
+    # def match_scales(self, targ_idx=1, dump=False):
+    #     if not self.scales_matched:
+    #         for i in range(len(self.ply_elems)):
+    #             if i == targ_idx:
+    #                 continue
+    #             self.ply_elems[i].rescale(utils_.scale_map[self.ply_elems[i].fname.replace('.ply', '.txt')])
+    #             if dump:
+    #                 out_ply_fpath = self.ply_elems[i].fpath.replace('.ply', '-rescaled.ply')
+    #                 if not os.path.exists(out_ply_fpath):
+    #                     self.ply_elems[i].dump(out_ply_fpath)
+    #                 else:
+    #                     print(out_ply_fpath, 'exists, skipping....')
+    #         self.scales_matched = True
 
     def sample_tile(self):
         tile_data = self.ply_elems[self.curr_ply_idx].sample_tile()
@@ -71,6 +68,7 @@ class PlyElem:
         self.rgbs = None
         self.data = utils_.read_ply(self.fpath, raw=True)
         self.point_class_color_hashes = None
+        self.rescale(utils_.scale_map[self.fname.replace('.ply', '.txt')])
 
     def sample_tile(self):
         self.load()
@@ -121,6 +119,7 @@ class PlyElem:
         self.xyzs = self.xyzs * scale
         self.xyz_min = self.xyzs.min(axis=0)
         self.xyz_max = self.xyzs.max(axis=0)
+        self.xs, self.ys, _ = self.xyzs.T
 
     def dump(self, fpath):
         self.load()
