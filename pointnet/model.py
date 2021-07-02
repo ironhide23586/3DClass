@@ -118,7 +118,7 @@ class PointNet:
             yield utils_.sample_data(self.val_point_data, random_transform=False)
 
     def get_train_gen(self):
-        for _ in range(utils_.BATCHES_PER_EPOCH):
+        for _ in range(utils_.NUM_TRAIN_STEPS):
             yield utils_.sample_data(self.val_point_data, random_transform=True)
 
     def make_model(self):
