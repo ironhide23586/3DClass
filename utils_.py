@@ -103,24 +103,6 @@ def sample_data(point_data, random_transform=False):
     return tile_xyzs_normalized, labels
 
 
-# def get_rot_mat(x_angle_deg, y_angle_deg, z_angle_deg):
-#     x_angle_rad = np.deg2rad(x_angle_deg)
-#     y_angle_rad = np.rad2deg(y_angle_deg)
-#     z_angle_rad = np.rad2deg(z_angle_deg)
-#     cos_x = np.cos(x_angle_rad)
-#     sin_x = np.sin(x_angle_rad)
-#     cos_y = np.cos(y_angle_rad)
-#     sin_y = np.sin(y_angle_rad)
-#     cos_z = np.cos(z_angle_rad)
-#     sin_z = np.sin(z_angle_rad)
-#     # x-phi, y-theta, z-quanta
-#     R = np.array([[cos_y * cos_z, (cos_x * sin_z) + (sin_x * sin_y * cos_z), (sin_x * sin_z) - (cos_x * sin_y * cos_z)],
-#                   [-cos_y * sin_z, (cos_x * cos_z) - (sin_x * sin_y * sin_z),
-#                    (sin_x * cos_z) + (cos_x * sin_y * cos_z)],
-#                   [sin_y, -sin_x * cos_y, cos_x * cos_y]])
-#     return R
-
-
 def get_rot_mat(quaternion_):
     quaternion = quaternion_ / np.linalg.norm(quaternion_)
     a, b, c, d = quaternion

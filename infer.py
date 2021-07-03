@@ -25,15 +25,11 @@ LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_3_2.laz'
 
 laz_data = LAZElem(LAZ_FPATH)
 laz_data.load()
-ret = laz_data.sample_tile([22, 1])
-tile_xyzs_raw, t_vec, _ = ret
-tile_xyzs = utils_.xyz_preprocess(tile_xyzs_raw)
-utils_.write_ply('tmp.ply', tile_xyzs)
-k = 0
 
-# pnet = PointNet(mode='infer')
-# pnet.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.803-0.36.hdf5')
-# pnet.load_weights(utils_.DIR + '/trained_models/aerial-pointnet-weights.06-0.30.hdf5')
+pnet = PointNet(mode='infer')
+pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.82-0.92.hdf5')
+pnet_ = PointNet(mode='infer')
+pnet_.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.803-0.36.hdf5')
 
 
 def clf_pcl(xy):
@@ -50,22 +46,27 @@ def clf_pcl(xy):
 
 
 if __name__ == '__main__':
-    # pf = PlyElem('C_37EZ1_3_2_22-1.ply')
-    # pf.load()
-    # xyzs = utils_.xyz_preprocess(pf.xyzs, translate=True)
-    # scores = pnet.infer(xyzs, rescale_scores=False)
-    #
-    # labels = scores.argmax(axis=1)
-    #
-    # idx = np.arange(scores.shape[0])
-    # shrub_idx = idx[labels == 2]
-    # shrub_scores = scores[shrub_idx]
-    # car_idx = shrub_idx[shrub_scores[:, utils_.labelname_id_remap['cars']] >= .4]
-    # labels[car_idx] = utils_.labelname_id_remap['cars']
-    #
-    # labels_pred_rgb = utils_.new_colors[labels]
-    # fp = pf.fname.replace('.ply', '-reclf.ply')
-    # utils_.write_ply(fp, pf.xyzs, labels_pred_rgb)
+
+    ret = laz_data.sample_tile([36, 10])
+    tile_xyzs_raw, t_vec, _ = ret
+    tile_xyzs = utils_.xyz_preprocess(tile_xyzs_raw)
+    # utils_.write_ply('tmp.ply', tile_xyzs)
+
+    scores_ = pnet.infer(tile_xyzs, rescale_scores=True, combine=True)
+    scores__ = pnet_.infer(np.floor(tile_xyzs / utils_.POINT_TILER_SIDE) * utils_.POINT_TILER_SIDE,
+                           rescale_scores=True, combine=True)
+    scores_ = pnet.infer(tile_xyzs, rescale_scores=False, combine=True)
+    scores__ = pnet_.infer(np.floor(tile_xyzs / utils_.POINT_TILER_SIDE) * utils_.POINT_TILER_SIDE,
+                           rescale_scores=False, combine=True)
+
+    scores = (scores_ + scores__) / 2.
+
+    labels = scores.argmax(axis=1)
+
+    # labels[scores[:, utils_.labelname_id_remap['high-vegetation']] > scores[:, utils_.labelname_id_remap['high-vegetation']].mean()] = utils_.labelname_id_remap['high-vegetation']
+    labels_pred_rgb = utils_.new_colors[labels]
+    fp = 'clf.ply'
+    utils_.write_ply(fp, tile_xyzs, labels_pred_rgb)
 
     nx, ny = laz_data.num_xy_tiles
     tile_centers = np.rollaxis(np.array(np.meshgrid(np.arange(nx), np.arange(ny))), 0, 3).reshape([-1, 2])

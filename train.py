@@ -32,20 +32,8 @@ if __name__ == '__main__':
 
     pnet = PointNet(mode='train')
     pnet.load_data(ply_fps[:-1], [ply_fps[-1]])
-    pnet.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.16-0.45.hdf5')
-
-    # from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-    #
-    # xyzs, labels_gt = utils_.sample_data(pnet.val_point_data)
-    # labels_pred = pnet.model.predict(xyzs).argmax(axis=-1)
-    # acc = accuracy_score(labels_gt[0], labels_pred[0])
-    # prec, prec, fsc, _ = precision_recall_fscore_support(labels_gt[0], labels_pred[0], labels=[0, 1, 2, 3, 4, 5])
-    #
-    # labels_pred_rgb = utils_.new_colors[labels_pred]
-    # utils_.write_ply('pred.ply', xyzs[0], labels_pred_rgb[0])
-
+    # pnet.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.16-0.45.hdf5')
     pnet.train()
-
 
     # point_data = PlySet(ply_fps)
     # point_data.match_scales()

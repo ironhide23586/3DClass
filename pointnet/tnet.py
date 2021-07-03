@@ -13,20 +13,20 @@ class TNet(Layer):
         super(TNet, self).__init__(**kwargs)
         self.add_regularization = add_regularization
         self.bn_momentum = bn_momentum
-        self.conv0 = CustomConv(64, (1, 1), strides=(1, 1), bn_momentum=bn_momentum)
-        self.conv1 = CustomConv(128, (1, 1), strides=(1, 1), bn_momentum=bn_momentum)
-        self.conv2 = CustomConv(1024, (1, 1), strides=(1, 1), bn_momentum=bn_momentum)
-        self.fc0 = CustomDense(512, activation=tf.nn.relu, apply_bn=False, bn_momentum=bn_momentum)
-        self.fc1 = CustomDense(256, activation=tf.nn.relu, apply_bn=False, bn_momentum=bn_momentum)
+        self.conv0 = CustomConv(64, (1, 3), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
+        self.conv1 = CustomConv(128, (1, 1), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
+        self.conv2 = CustomConv(1024, (1, 1), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
+        self.fc0 = CustomDense(512, bn_momentum=bn_momentum)
+        self.fc1 = CustomDense(256, bn_momentum=bn_momentum)
 
     def build(self, input_shape):
         self.K = input_shape[-1]
 
         self.w = self.add_weight(shape=(256, self.K ** 2), initializer=tf.zeros_initializer,
                                  trainable=True, name='w')
-        self.b = self.add_weight(shape=(self.K, self.K), initializer=tf.zeros_initializer,
+        self.b = self.add_weight(shape=(self.K, self.K),
+                                 initializer=tf.zeros_initializer,
                                  trainable=True, name='b')
-
         # Initialize bias with identity
         I = tf.constant(np.eye(self.K), dtype=tf.float32)
         self.b = tf.math.add(self.b, I)
@@ -79,8 +79,8 @@ class TNet(Layer):
 
 
 class CustomConv(Layer):
-    def __init__(self, filters, kernel_size, strides, padding='valid', activation=None,
-                 apply_bn=False, bn_momentum=0.99, **kwargs):
+    def __init__(self, filters, kernel_size, strides, padding='valid',
+                 activation=tf.nn.relu, apply_bn=False, bn_momentum=0.99, **kwargs):
         super(CustomConv, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = kernel_size
@@ -124,7 +124,7 @@ class CustomConv(Layer):
 
 
 class CustomDense(Layer):
-    def __init__(self, units, activation=None, apply_bn=False, bn_momentum=0.99, **kwargs):
+    def __init__(self, units, activation=tf.nn.relu, apply_bn=False, bn_momentum=0.99, **kwargs):
         super(CustomDense, self).__init__(**kwargs)
         self.units = units
         self.activation = activation

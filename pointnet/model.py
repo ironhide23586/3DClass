@@ -103,13 +103,17 @@ class PointNet:
         self.keras_val_data = tf.data.Dataset.from_generator(self.get_val_gen, (tf.float32, tf.int32))
         self.keras_train_data = tf.data.Dataset.from_generator(self.get_train_gen, (tf.float32, tf.int32))
 
-    def infer(self, xyzs_, rescale_scores=False):
+    def infer(self, xyzs_, rescale_scores=False, combine=False):
         if len(xyzs_.shape) == 3:
             ret = np.squeeze(self.model.predict(xyzs_))
         else:
             ret = np.squeeze(self.model.predict(np.expand_dims(xyzs_, 0)))
         if rescale_scores:
-            return ret / ret.max(axis=0)
+            ret_ = ret / ret.max(axis=0)
+            if combine:
+                return (ret_ + ret) / 2.
+            else:
+                return ret_
         else:
             return ret
 
@@ -128,33 +132,55 @@ class PointNet:
 
         # (2)	Input transform. Apply a T-Net module (which outputs a 3x3 transformation matrix)
         # to standardize the input.
-        x = TNet(add_regularization=False, bn_momentum=self.bn_momentum)(input)
+        x = TNet(add_regularization=True, bn_momentum=self.bn_momentum)(tf.expand_dims(input, -1))
 
         # (3)	Two point-wise convolution. shared mlp(64,64)
-        x = custom_conv(x, 32)
-        x = custom_conv(x, 32)
+        # x = custom_conv(x, 32)
+        # x = custom_conv(x, 32)
+        x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 3], strides=1, padding="valid",
+                                   use_bias=True)(x)
+        x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
+                                   use_bias=True)(x)
 
         # (4)	Feature transform. Apply a T-Net module (which outputs a 64x64 transformation matrix)
         # to standardize the feature.
-        x = TNet(add_regularization=True, bn_momentum=self.bn_momentum)(x)
+        local_feat = TNet(add_regularization=True, bn_momentum=self.bn_momentum)(tf.transpose(x, [0, 1, 3, 2]))
         # (5)	Three point-wise convolution. shared mlp(64,128,1024)
-        local_feat = custom_conv(x, 32)
-        x = custom_conv(local_feat, 64)
-        x = custom_conv(x, 512)
+
+        x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
+                                   use_bias=True)(local_feat)
+        x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
+                                   use_bias=True)(x)
+        x = tf.keras.layers.Conv2D(1024, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
+                                   use_bias=True)(x)
+
+        # local_feat = custom_conv(x, 64)
+        # x = custom_conv(x, 64)
+        # x = custom_conv(x, 512)
 
         # (6)	Max pooling to aggregate information over all points to gain the global descriptor (1024 vector)
         # compare GlobalMaxPool1D with MaxPool1D
-        global_feat = tf.keras.layers.GlobalMaxPool1D()(x)
+        # global_feature = tf.keras.layers.MaxPooling2D(pool_size=(num_points, 1), strides=(2, 2), padding='valid')(x)
+        global_feat = tf.keras.layers.GlobalMaxPooling2D()(x)
 
-        global_feat = tf.expand_dims(global_feat, axis=1)
-        global_feat = tf.tile(global_feat, [1, num_points, 1])
-        x = tf.concat([local_feat, global_feat], axis=-1)
+        global_feat = tf.expand_dims(tf.expand_dims(global_feat, -1), 1)
+        global_feat = tf.tile(global_feat, [1, num_points, 1, 1])
+        x = tf.concat([local_feat, global_feat], axis=-2)
 
-        x = custom_conv(x, 256)
-        x = custom_conv(x, 128)
-        x = custom_conv(x, 64)
-        x = custom_conv(x, 8)
-        output = custom_conv(x, utils_.n_classes, activation='softmax')
+        x = tf.keras.layers.Conv2D(512, activation='relu', kernel_size=[1, 3], strides=2, padding="valid",
+                                   use_bias=True)(x)
+        x = tf.keras.layers.Conv2D(256, activation='relu', kernel_size=[1, 3], strides=2, padding="valid",
+                                   use_bias=True)(x)
+        x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 3], strides=2, padding="valid",
+                                   use_bias=True)(x)
+        x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 135], strides=1, padding="valid",
+                                   use_bias=True)(x)
+        output = tf.nn.softmax(x)
+        # x = custom_conv(x, 256)
+        # x = custom_conv(x, 128)
+        # x = custom_conv(x, 64)
+        # x = custom_conv(x, 8)
+        # output = custom_conv(x, utils_.n_classes, activation='softmax')
 
         # build the model
         model = tf.keras.models.Model(inputs=input, outputs=output)
