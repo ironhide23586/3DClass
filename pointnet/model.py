@@ -147,7 +147,7 @@ class PointNet:
                                    use_bias=True)(local_feat)
         x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
                                    use_bias=True)(x)
-        x = tf.keras.layers.Conv2D(1024, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
+        x = tf.keras.layers.Conv2D(512, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
                                    use_bias=True)(x)
 
         # (6)	Max pooling to aggregate information over all points to gain the global descriptor (1024 vector)
