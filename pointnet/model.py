@@ -136,7 +136,7 @@ class PointNet:
         # (3)	Two point-wise convolution. shared mlp(64,64)
         x = tf.keras.layers.Conv2D(32, activation='relu', kernel_size=[1, 3], strides=1, padding="valid",
                                    use_bias=True)(x)
-        x = tf.keras.layers.Conv2D(32, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
+        x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
                                    use_bias=True)(x)
         # (4)	Feature transform. Apply a T-Net module (which outputs a 64x64 transformation matrix)
         # to standardize the feature.
