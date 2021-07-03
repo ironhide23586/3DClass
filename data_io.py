@@ -85,7 +85,7 @@ class PlyElem:
             filt = np.logical_and(np.logical_and(color_hashes != utils_.excluded_label_hashes[0],
                                                  color_hashes != utils_.excluded_label_hashes[1]),
                                   color_hashes != utils_.excluded_label_hashes[2])
-            if filt[filt].shape[0] < 10000:
+            if filt[filt].shape[0] < 100:
                 continue
             xyzs = xyzs[filt]
             rgbs = rgbs[filt]
@@ -98,8 +98,8 @@ class PlyElem:
             rgbs = rgbs[i_]
             xyzs = xyzs_uq
             break
-        if xyzs.shape[0] > 30000:
-            s = int(np.ceil(xyzs.shape[0] / 30000))
+        if xyzs.shape[0] > utils_.MAX_TRAIN_IN_POINTS:
+            s = int(np.ceil(xyzs.shape[0] / utils_.MAX_TRAIN_IN_POINTS))
             idx = np.arange(0, xyzs.shape[0], s)
             xyzs = xyzs[idx]
             rgbs = rgbs[idx]
