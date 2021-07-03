@@ -43,7 +43,7 @@ class PointNet:
 
     def __init__(self, mode='infer'):
         self.bn_momentum = 0.99
-        self.model = self.make_model()
+        self.model = self.make_model(mode)
         if mode == 'train':
             self.model.compile('adam', loss='sparse_categorical_crossentropy',
                                metrics=['sparse_categorical_accuracy'])
@@ -125,9 +125,12 @@ class PointNet:
         for _ in range(utils_.NUM_TRAIN_STEPS):
             yield utils_.sample_data(self.train_point_data, random_transform=True)
 
-    def make_model(self):
+    def make_model(self, mode):
         # (1) input
-        input = tf.keras.Input(shape=(None, 3))
+        if mode == 'infer':
+            input = tf.keras.Input(shape=(None, 3))
+        else:
+            input = tf.keras.Input(shape=(utils_.MAX_TRAIN_IN_POINTS, 3))
         num_points = tf.shape(input)[1]
 
         # (2)	Input transform. Apply a T-Net module (which outputs a 3x3 transformation matrix)
