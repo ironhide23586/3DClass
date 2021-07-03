@@ -44,7 +44,9 @@ import os
 
 import pylas
 import numpy as np
+import cv2
 from plyfile import PlyElement, PlyData
+
 
 label_colors = [(0, 0, 0), (244, 35, 231), (152, 250, 152),
                 # 0 = unlabelled, 1 = man-made-terrain, 2 = natural-terrain
@@ -85,6 +87,31 @@ scale_map = dict(zip(scale_fnames, k / np.array([0.019111323459149544, 0.0152102
 def force_makedir(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
+
+
+def scores2labels(scores, tile_xyzs):
+    labels = scores.argmax(axis=1)
+    idx = np.arange(scores.shape[0])
+    i = idx[labels == 1]
+    p = tile_xyzs[i]
+    canvas = np.zeros([GRID_H, GRID_W])
+    xys = (((p[:, :2] + 1) / 2.) * [GRID_W, GRID_H]).astype(np.int)
+    canvas[xys[:, 1], xys[:, 0]] = 255
+    tree_hm = cv2.erode(canvas, np.ones([2, 2]))
+    xys = np.unique(np.rollaxis(np.array(np.meshgrid(np.arange(GRID_W),
+                                                     np.arange(GRID_H))), 0, 3)[tree_hm > 0], axis=0)
+    if xys.shape[0] > 0:
+        xys_ = ((xys / [GRID_W, GRID_H]) - .5) * 2.
+        d = np.array([np.linalg.norm(p[:, :2] - p_, axis=1) for p_ in xys_])
+        d_thresh = POINT_TILER_SIDE / GRID_W
+        d_xys_painted = np.rollaxis(np.array(np.meshgrid(np.arange(d.shape[1]),
+                                                         np.arange(d.shape[0]))), 0, 3)[
+            np.logical_and(d < (200 * d_thresh), d > 0)]
+        tree_idx = i[d_xys_painted[:, 0]]
+        labels[labels == 1] = 3
+        labels[tree_idx] = 1
+    labels[tile_xyzs[:, -1] < .18] = 0
+    return labels
 
 
 def sample_data_worker(point_data, random_transform=False):
