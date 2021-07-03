@@ -27,9 +27,9 @@ laz_data = LAZElem(LAZ_FPATH)
 laz_data.load()
 
 pnet = PointNet(mode='infer')
-pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.82-0.92.hdf5')
-pnet_ = PointNet(mode='infer')
-pnet_.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.803-0.36.hdf5')
+pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
+# pnet_ = PointNet(mode='infer')
+# pnet_.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.803-0.36.hdf5')
 
 
 def clf_pcl(xy):
@@ -47,23 +47,24 @@ def clf_pcl(xy):
 
 if __name__ == '__main__':
 
+    # pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.32-1.15.hdf5')
+    # pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
+
     ret = laz_data.sample_tile([36, 10])
     tile_xyzs_raw, t_vec, _ = ret
-    tile_xyzs = utils_.xyz_preprocess(tile_xyzs_raw)
-    # utils_.write_ply('tmp.ply', tile_xyzs)
+    tile_xyzs_ = utils_.xyz_preprocess(tile_xyzs_raw)
 
-    scores_ = pnet.infer(tile_xyzs, rescale_scores=True, combine=True)
-    scores__ = pnet_.infer(np.floor(tile_xyzs / utils_.POINT_TILER_SIDE) * utils_.POINT_TILER_SIDE,
-                           rescale_scores=True, combine=True)
-    scores_ = pnet.infer(tile_xyzs, rescale_scores=False, combine=True)
-    scores__ = pnet_.infer(np.floor(tile_xyzs / utils_.POINT_TILER_SIDE) * utils_.POINT_TILER_SIDE,
-                           rescale_scores=False, combine=True)
-
-    scores = (scores_ + scores__) / 2.
-
+    tile_xyzs = tile_xyzs_[np.random.choice(np.arange(tile_xyzs_.shape[0]), utils_.MAX_TRAIN_IN_POINTS)]
+    scores = pnet.infer(tile_xyzs)
     labels = scores.argmax(axis=1)
 
-    # labels[scores[:, utils_.labelname_id_remap['high-vegetation']] > scores[:, utils_.labelname_id_remap['high-vegetation']].mean()] = utils_.labelname_id_remap['high-vegetation']
+    # idx = np.arange(scores.shape[0])
+    # i = idx[labels == 1]
+    # b_scores = scores[i, 3]
+    # b_scores = b_scores / b_scores.max()
+    # b_idx = i[b_scores > .5]
+    # labels[b_idx] = 3
+
     labels_pred_rgb = utils_.new_colors[labels]
     fp = 'clf.ply'
     utils_.write_ply(fp, tile_xyzs, labels_pred_rgb)

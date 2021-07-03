@@ -45,10 +45,10 @@ class PointNet:
         self.bn_momentum = 0.99
         self.model = self.make_model(mode)
         if mode == 'train':
-            self.model.compile('adam', loss='sparse_categorical_crossentropy',
-                               metrics=['sparse_categorical_accuracy'])
-            # self.model.compile('adam', loss=self.loss_func,
+            # self.model.compile('adam', loss='sparse_categorical_crossentropy',
             #                    metrics=['sparse_categorical_accuracy'])
+            self.model.compile('adam', loss=self.loss_func,
+                               metrics=['sparse_categorical_accuracy'])
         self.keras_train_data = None
         self.val_point_data = None
         self.train_point_data = None
@@ -56,6 +56,7 @@ class PointNet:
 
     def loss_func(self, y_true, y_pred):
         yt = tf.one_hot(y_true, depth=len(utils_.new_labels))
+        loss_ortho = tf.reduce_mean(self.model.get_losses_for(self.model.inputs[0]))
         y_true_pos = tf.reshape(yt, [-1, ])
         y_pred_pos = tf.reshape(y_pred, [-1, ])
         tp = tf.reduce_sum(y_true_pos * y_pred_pos)
@@ -65,7 +66,7 @@ class PointNet:
         smooth = 1.
         sc = (tp + smooth) / (tp + alpha * fn + (1 - alpha) * fp + smooth)
         total_loss = 1. - sc
-        return total_loss
+        return total_loss + loss_ortho
 
     def load_weights(self, fpath):
         print('---------> Loading weights from', fpath)

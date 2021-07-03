@@ -14,9 +14,9 @@ Website: https://www.linkedin.com/in/souham/
 DIR = 'scratchspace'
 GT_DIR = DIR + '/training_data'
 
-MAX_TRAIN_IN_POINTS = 6000
+MAX_TRAIN_IN_POINTS = 2048
 
-BATCH_SIZE = 3
+BATCH_SIZE = 6
 
 UPDATE_TENSORBOARD_EVERY_N_STEPS = 10
 
