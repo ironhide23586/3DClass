@@ -91,7 +91,7 @@ def sample_data(point_data, random_transform=False):
         return None, None
     if len(ret) == 2:
         tile_xyzs, tile_rgbs = ret
-        labels = np.expand_dims(rgb2label(tile_rgbs), 0)
+        labels = np.expand_dims(rgb2label(tile_rgbs), 0).astype(np.int)
     else:
         tile_xyzs, _, _ = ret
         labels = None

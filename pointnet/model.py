@@ -72,7 +72,7 @@ class PointNet:
         self.model.load_weights(fpath)
 
     def train(self):
-        # x, y = utils_.sample_data(self.val_point_data, random_transform=False)
+        x, y = utils_.sample_data(self.val_point_data, random_transform=False)
         # rgbs = utils_.new_colors[y[0]]
         # utils_.write_ply('tmp_.ply', x, rgbs)
 
@@ -166,7 +166,7 @@ class PointNet:
         x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
                                    use_bias=True)(x)
         x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 71], strides=1, padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=True)(x)[:, :, 0, :]
         output = tf.nn.softmax(x)
         # x = custom_conv(x, 256)
         # x = custom_conv(x, 128)

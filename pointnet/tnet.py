@@ -14,7 +14,7 @@ class TNet(Layer):
         self.feature_size = feature_size
         self.add_regularization = add_regularization
         self.bn_momentum = bn_momentum
-        self.conv0 = CustomConv(64, (1, 3), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
+        self.conv0 = CustomConv(64, (1, feature_size), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
         self.conv1 = CustomConv(128, (1, 1), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
         self.conv2 = CustomConv(1024, (1, 1), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
         self.fc0 = CustomDense(512, bn_momentum=bn_momentum)
