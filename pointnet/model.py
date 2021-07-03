@@ -165,7 +165,7 @@ class PointNet:
                                    use_bias=True)(x)
         x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
                                    use_bias=True)(x)
-        x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 135], strides=1, padding="valid",
+        x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 71], strides=1, padding="valid",
                                    use_bias=True)(x)
         output = tf.nn.softmax(x)
         # x = custom_conv(x, 256)
