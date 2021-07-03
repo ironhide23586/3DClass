@@ -132,7 +132,7 @@ class PointNet:
 
         # (2)	Input transform. Apply a T-Net module (which outputs a 3x3 transformation matrix)
         # to standardize the input.
-        x = TNet(add_regularization=True, bn_momentum=self.bn_momentum)(tf.expand_dims(input, -1))
+        x = TNet(3, add_regularization=True, bn_momentum=self.bn_momentum)(tf.expand_dims(input, -1))
 
         # (3)	Two point-wise convolution. shared mlp(64,64)
         # x = custom_conv(x, 32)
@@ -144,7 +144,7 @@ class PointNet:
         x = tf.expand_dims(tf.squeeze(x), -1)
         # (4)	Feature transform. Apply a T-Net module (which outputs a 64x64 transformation matrix)
         # to standardize the feature.
-        local_feat = TNet(add_regularization=True, bn_momentum=self.bn_momentum)(x)
+        local_feat = TNet(64, add_regularization=True, bn_momentum=self.bn_momentum)(x)
         # (5)	Three point-wise convolution. shared mlp(64,128,1024)
 
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",

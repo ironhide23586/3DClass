@@ -9,8 +9,9 @@ from tensorflow.keras.layers import Input, Layer, Conv2D, BatchNormalization, De
 # from custommodel import CustomModel
 
 class TNet(Layer):
-    def __init__(self, add_regularization=False, bn_momentum=0.99, **kwargs):
+    def __init__(self, feature_size, add_regularization=False, bn_momentum=0.99, **kwargs):
         super(TNet, self).__init__(**kwargs)
+        self.feature_size = feature_size
         self.add_regularization = add_regularization
         self.bn_momentum = bn_momentum
         self.conv0 = CustomConv(64, (1, 3), padding='valid', strides=(1, 1), bn_momentum=bn_momentum)
@@ -20,15 +21,14 @@ class TNet(Layer):
         self.fc1 = CustomDense(256, bn_momentum=bn_momentum)
 
     def build(self, input_shape):
-        self.K = input_shape[-1]
-
-        self.w = self.add_weight(shape=(256, self.K ** 2), initializer=tf.zeros_initializer,
+        # self.K = input_shape[-1]
+        self.w = self.add_weight(shape=(256, self.feature_size ** 2), initializer=tf.zeros_initializer,
                                  trainable=True, name='w')
-        self.b = self.add_weight(shape=(self.K, self.K),
+        self.b = self.add_weight(shape=(self.feature_size, self.feature_size),
                                  initializer=tf.zeros_initializer,
                                  trainable=True, name='b')
         # Initialize bias with identity
-        I = tf.constant(np.eye(self.K), dtype=tf.float32)
+        I = tf.constant(np.eye(self.feature_size), dtype=tf.float32)
         self.b = tf.math.add(self.b, I)
 
     def call(self, x, training=None):
