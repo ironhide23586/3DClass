@@ -15,7 +15,7 @@ import os
 import threading
 
 import numpy as np
-import numpy_indexed as npi
+# import numpy_indexed as npi
 from plyfile import PlyElement, PlyData
 
 import utils_
@@ -91,15 +91,7 @@ class PlyElem:
             rgbs = rgbs[filt]
             # xyzs = np.floor(xyzs / utils_.GRID_RESOLUTION)
             xyzs = xyzs - xyzs.min(axis=0)
-            # xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
-            # xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
-            xyzs_uq = npi.unique(xyzs)
-            i_ = npi.indices(xyzs, xyzs_uq)
-            rgbs = rgbs[i_]
-            xyzs = xyzs_uq
             break
-        # if xyzs.shape[0] > utils_.MAX_TRAIN_IN_POINTS:
-
         idx = np.random.choice(np.arange(xyzs.shape[0]), utils_.MAX_TRAIN_IN_POINTS)
         # s = int(np.ceil(xyzs.shape[0] / utils_.MAX_TRAIN_IN_POINTS))
         # idx = np.arange(0, xyzs.shape[0], s)
