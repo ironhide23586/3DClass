@@ -133,15 +133,11 @@ class PointNet:
         # (2)	Input transform. Apply a T-Net module (which outputs a 3x3 transformation matrix)
         # to standardize the input.
         x = TNet(3, add_regularization=True, bn_momentum=self.bn_momentum)(tf.expand_dims(input, -1))
-
         # (3)	Two point-wise convolution. shared mlp(64,64)
-        # x = custom_conv(x, 32)
-        # x = custom_conv(x, 32)
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 3], strides=1, padding="valid",
                                    use_bias=True)(x)
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
                                    use_bias=True)(x)
-        # x = tf.expand_dims(tf.squeeze(x), -1)
         # (4)	Feature transform. Apply a T-Net module (which outputs a 64x64 transformation matrix)
         # to standardize the feature.
         local_feat = TNet(64, add_regularization=True, bn_momentum=self.bn_momentum)(tf.transpose(x, [0, 1, 3, 2]))
@@ -153,10 +149,6 @@ class PointNet:
                                    use_bias=True)(x)
         x = tf.keras.layers.Conv2D(1024, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
                                    use_bias=True)(x)
-
-        # local_feat = custom_conv(x, 64)
-        # x = custom_conv(x, 64)
-        # x = custom_conv(x, 512)
 
         # (6)	Max pooling to aggregate information over all points to gain the global descriptor (1024 vector)
         # compare GlobalMaxPool1D with MaxPool1D

@@ -64,7 +64,8 @@ class TNet(Layer):
             x_xT = tf.matmul(x, tf.transpose(x, perm=[0, 2, 1]))
             reg_loss = tf.nn.l2_loss(eye - x_xT)
             self.add_loss(1e-3 * reg_loss)
-        return tf.matmul(x, input_x)
+        # return input_x, x
+        return tf.expand_dims(tf.matmul(input_x[:, :, :, 0], x), -1)
 
     def get_config(self):
         config = super(TNet, self).get_config()
