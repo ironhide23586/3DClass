@@ -141,10 +141,10 @@ class PointNet:
                                    use_bias=True)(x)
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
                                    use_bias=True)(x)
-        x = tf.expand_dims(tf.squeeze(x), -1)
+        # x = tf.expand_dims(tf.squeeze(x), -1)
         # (4)	Feature transform. Apply a T-Net module (which outputs a 64x64 transformation matrix)
         # to standardize the feature.
-        local_feat = TNet(64, add_regularization=True, bn_momentum=self.bn_momentum)(x)
+        local_feat = TNet(64, add_regularization=True, bn_momentum=self.bn_momentum)(tf.transpose(x, [0, 1, 3, 2]))
         # (5)	Three point-wise convolution. shared mlp(64,128,1024)
 
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
