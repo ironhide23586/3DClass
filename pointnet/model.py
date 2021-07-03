@@ -72,7 +72,7 @@ class PointNet:
         self.model.load_weights(fpath)
 
     def train(self):
-        x, y = utils_.sample_data(self.val_point_data, random_transform=False)
+        # x, y = utils_.sample_data(self.val_point_data, random_transform=False)
         # rgbs = utils_.new_colors[y[0]]
         # utils_.write_ply('tmp_.ply', x, rgbs)
 
@@ -135,20 +135,26 @@ class PointNet:
         x = TNet(3, add_regularization=True, bn_momentum=self.bn_momentum)(tf.expand_dims(input, -1))
         # (3)	Two point-wise convolution. shared mlp(64,64)
         x = tf.keras.layers.Conv2D(32, activation='relu', kernel_size=[1, 3], strides=1, padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
+
         # (4)	Feature transform. Apply a T-Net module (which outputs a 64x64 transformation matrix)
         # to standardize the feature.
         local_feat = TNet(64, add_regularization=True, bn_momentum=self.bn_momentum)(tf.transpose(x, [0, 1, 3, 2]))
         # (5)	Three point-wise convolution. shared mlp(64,128,1024)
 
         x = tf.keras.layers.Conv2D(32, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
-                                   use_bias=True)(local_feat)
+                                   use_bias=False)(local_feat)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
         x = tf.keras.layers.Conv2D(256, activation='relu', kernel_size=[1, 1], strides=1, padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
 
         # (6)	Max pooling to aggregate information over all points to gain the global descriptor (1024 vector)
         # compare GlobalMaxPool1D with MaxPool1D
@@ -160,13 +166,16 @@ class PointNet:
         x = tf.concat([local_feat, global_feat], axis=-2)
 
         x = tf.keras.layers.Conv2D(256, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
         x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
         x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
-                                   use_bias=True)(x)
+                                   use_bias=False)(x)
+        x = tf.keras.layers.BatchNormalization(momentum=self.bn_momentum)(x)
         x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 39], strides=1, padding="valid",
-                                   use_bias=True)(x)[:, :, 0, :]
+                                   use_bias=False)(x)[:, :, 0, :]
         output = tf.nn.softmax(x)
         # x = custom_conv(x, 256)
         # x = custom_conv(x, 128)

@@ -16,6 +16,8 @@ GT_DIR = DIR + '/training_data'
 
 MAX_TRAIN_IN_POINTS = 6000
 
+BATCH_SIZE = 3
+
 UPDATE_TENSORBOARD_EVERY_N_STEPS = 10
 
 BASE_LR = 1e-4
@@ -85,7 +87,7 @@ def force_makedir(dir):
         os.makedirs(dir)
 
 
-def sample_data(point_data, random_transform=False):
+def sample_data_worker(point_data, random_transform=False):
     ret = point_data.sample_tile()
     if ret is None:
         return None, None
@@ -104,6 +106,26 @@ def sample_data(point_data, random_transform=False):
     tile_xyzs_normalized = np.expand_dims(xyzs, 0)
     return tile_xyzs_normalized, labels
 
+
+def sample_data(point_data, random_transform=False):
+    xs = []
+    ys = []
+    cnt = 0
+    if random_transform:
+        while True:
+            x, y = sample_data_worker(point_data, random_transform)
+            if x is None:
+                continue
+            xs.append(x)
+            ys.append(y)
+            cnt += 1
+            if cnt == BATCH_SIZE:
+                break
+        xs = np.vstack(xs)
+        ys = np.vstack(ys)
+    else:
+        xs, ys = sample_data_worker(point_data, random_transform)
+    return xs, ys
 
 def get_rot_mat(quaternion_):
     quaternion = quaternion_ / np.linalg.norm(quaternion_)

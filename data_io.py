@@ -98,11 +98,13 @@ class PlyElem:
             rgbs = rgbs[i_]
             xyzs = xyzs_uq
             break
-        if xyzs.shape[0] > utils_.MAX_TRAIN_IN_POINTS:
-            s = int(np.ceil(xyzs.shape[0] / utils_.MAX_TRAIN_IN_POINTS))
-            idx = np.arange(0, xyzs.shape[0], s)
-            xyzs = xyzs[idx]
-            rgbs = rgbs[idx]
+        # if xyzs.shape[0] > utils_.MAX_TRAIN_IN_POINTS:
+
+        idx = np.random.choice(np.arange(xyzs.shape[0]), utils_.MAX_TRAIN_IN_POINTS)
+        # s = int(np.ceil(xyzs.shape[0] / utils_.MAX_TRAIN_IN_POINTS))
+        # idx = np.arange(0, xyzs.shape[0], s)
+        xyzs = xyzs[idx]
+        rgbs = rgbs[idx]
         return xyzs, rgbs
 
     def load(self):

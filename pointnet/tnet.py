@@ -80,7 +80,7 @@ class TNet(Layer):
 
 class CustomConv(Layer):
     def __init__(self, filters, kernel_size, strides, padding='valid',
-                 activation=tf.nn.relu, apply_bn=False, bn_momentum=0.99, **kwargs):
+                 activation=tf.nn.relu, apply_bn=True, bn_momentum=0.99, **kwargs):
         super(CustomConv, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = kernel_size
@@ -124,7 +124,7 @@ class CustomConv(Layer):
 
 
 class CustomDense(Layer):
-    def __init__(self, units, activation=tf.nn.relu, apply_bn=False, bn_momentum=0.99, **kwargs):
+    def __init__(self, units, activation=tf.nn.relu, apply_bn=True, bn_momentum=0.99, **kwargs):
         super(CustomDense, self).__init__(**kwargs)
         self.units = units
         self.activation = activation
