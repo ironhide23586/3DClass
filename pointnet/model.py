@@ -159,13 +159,13 @@ class PointNet:
         global_feat = tf.tile(global_feat, [1, num_points, 1, 1])
         x = tf.concat([local_feat, global_feat], axis=-2)
 
-        x = tf.keras.layers.Conv2D(512, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
-                                   use_bias=True)(x)
         x = tf.keras.layers.Conv2D(256, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
                                    use_bias=True)(x)
         x = tf.keras.layers.Conv2D(128, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
                                    use_bias=True)(x)
-        x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 71], strides=1, padding="valid",
+        x = tf.keras.layers.Conv2D(64, activation='relu', kernel_size=[1, 3], strides=(1, 2), padding="valid",
+                                   use_bias=True)(x)
+        x = tf.keras.layers.Conv2D(utils_.n_classes, activation='relu', kernel_size=[1, 39], strides=1, padding="valid",
                                    use_bias=True)(x)[:, :, 0, :]
         output = tf.nn.softmax(x)
         # x = custom_conv(x, 256)
