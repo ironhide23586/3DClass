@@ -14,9 +14,9 @@ Website: https://www.linkedin.com/in/souham/
 DIR = 'scratchspace'
 GT_DIR = DIR + '/training_data'
 
-MAX_TRAIN_IN_POINTS = 2048
+MAX_TRAIN_IN_POINTS = 3096
 
-BATCH_SIZE = 6
+BATCH_SIZE = 4
 
 UPDATE_TENSORBOARD_EVERY_N_STEPS = 10
 
@@ -98,7 +98,7 @@ def sample_data_worker(point_data, random_transform=False):
         tile_xyzs, _, _ = ret
         labels = None
     xyzs = xyz_preprocess(tile_xyzs)
-    if random_transform:  # random 3D rotation
+    if random_transform and np.random.random() > .5:  # random 3D rotation
         # angle_x, angle_y, angle_z = np.random.uniform(0, 360, size=3)
         quaternion = np.random.uniform(0, 1, size=4)
         R = get_rot_mat(quaternion)
