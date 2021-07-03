@@ -55,17 +55,20 @@ class PointNet:
         self.keras_val_data = None
 
     def loss_func(self, y_true, y_pred):
-        yt = tf.one_hot(y_true, depth=len(utils_.new_labels))
         loss_ortho = tf.reduce_mean(self.model.get_losses_for(self.model.inputs[0]))
-        y_true_pos = tf.reshape(yt, [-1, ])
-        y_pred_pos = tf.reshape(y_pred, [-1, ])
-        tp = tf.reduce_sum(y_true_pos * y_pred_pos)
-        fn = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
-        fp = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
-        alpha = .5
-        smooth = 1.
-        sc = (tp + smooth) / (tp + alpha * fn + (1 - alpha) * fp + smooth)
-        total_loss = 1. - sc
+        total_loss = tf.losses.SparseCategoricalCrossentropy(from_logits=False)(y_true, y_pred)
+
+        # yt = tf.one_hot(y_true, depth=len(utils_.new_labels))
+        # y_true_pos = tf.reshape(yt, [-1, ])
+        # y_pred_pos = tf.reshape(y_pred, [-1, ])
+        # tp = tf.reduce_sum(y_true_pos * y_pred_pos)
+        # fn = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
+        # fp = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
+        # alpha = .5
+        # smooth = 1.
+        # sc = (tp + smooth) / (tp + alpha * fn + (1 - alpha) * fp + smooth)
+        # total_loss = 1. - sc
+
         return total_loss + loss_ortho
 
     def load_weights(self, fpath):

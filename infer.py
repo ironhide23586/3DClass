@@ -27,7 +27,7 @@ laz_data = LAZElem(LAZ_FPATH)
 laz_data.load()
 
 pnet = PointNet(mode='infer')
-pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
+pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.20-0.42.hdf5')
 # pnet_ = PointNet(mode='infer')
 # pnet_.load_weights(utils_.DIR + '/trained_models-0/aerial-pointnet-weights.803-0.36.hdf5')
 
@@ -48,13 +48,13 @@ def clf_pcl(xy):
 if __name__ == '__main__':
 
     # pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.32-1.15.hdf5')
-    # pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
+    pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
 
     ret = laz_data.sample_tile([36, 10])
     tile_xyzs_raw, t_vec, _ = ret
-    tile_xyzs_ = utils_.xyz_preprocess(tile_xyzs_raw)
+    tile_xyzs = utils_.xyz_preprocess(tile_xyzs_raw)
 
-    tile_xyzs = tile_xyzs_[np.random.choice(np.arange(tile_xyzs_.shape[0]), utils_.MAX_TRAIN_IN_POINTS)]
+    # tile_xyzs = tile_xyzs_[np.random.choice(np.arange(tile_xyzs_.shape[0]), utils_.MAX_TRAIN_IN_POINTS)]
     scores = pnet.infer(tile_xyzs)
     labels = scores.argmax(axis=1)
 
