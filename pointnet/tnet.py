@@ -53,14 +53,14 @@ class TNet(Layer):
         x = tf.expand_dims(x, axis=1)  # Bx1x256
         x = tf.matmul(x, self.w)  # Bx1xK^2
         x = tf.squeeze(x, axis=1)
-        x = tf.reshape(x, (-1, self.K, self.K))
+        x = tf.reshape(x, (-1, self.feature_size, self.feature_size))
 
         # Add bias term (initialized to identity matrix)
         x += self.b
 
         # Add regularization (add augxilary loss--yc)
         if self.add_regularization:
-            eye = tf.constant(np.eye(self.K), dtype=tf.float32)
+            eye = tf.constant(np.eye(self.feature_size), dtype=tf.float32)
             x_xT = tf.matmul(x, tf.transpose(x, perm=[0, 2, 1]))
             reg_loss = tf.nn.l2_loss(eye - x_xT)
             self.add_loss(1e-3 * reg_loss)
