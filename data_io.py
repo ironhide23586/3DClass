@@ -170,9 +170,6 @@ class LAZElem:
         xyzs = self.xyzs[filt]
         t_vec = xyzs.min(axis=0)
         xyzs = xyzs - t_vec
-        # xyzs[:, -1] = np.clip(xyzs[:, -1], 0, utils_.GRID_D - 1)
-        # xyzs[:, :-1] = np.clip(xyzs[:, :-1], 0, utils_.GRID_W - 1)
-        # tile = npi.unique(xyzs)
 
         if start_xy is None:
             if (self.start_tile_x + 1) >= self.num_xy_tiles[0]:

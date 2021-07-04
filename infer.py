@@ -12,7 +12,8 @@ Website: https://www.linkedin.com/in/souham/
 """
 
 import os
-from multiprocessing import Pool, cpu_count
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import cpu_count
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -66,9 +67,13 @@ if __name__ == '__main__':
     # for tc in tile_centers:
     #     clf_pcl(tc)
 
-    p = Pool(cpu_count())
-    p.map(clf_pcl, tile_centers)
+    # p = Pool(cpu_count())
+    # p.map(clf_pcl, tile_centers)
 
+    ex = ThreadPoolExecutor(max_workers=cpu_count())
+    for tc in tile_centers:
+        ex.submit(clf_pcl, tc)
+    ex.shutdown()
     k = 0
 
     # suffix = '-'.join(map(str, [laz_data.start_tile_x, laz_data.start_tile_y]))
