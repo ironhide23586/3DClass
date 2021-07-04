@@ -23,7 +23,7 @@ import utils_
 from data_io import LAZElem
 from pointnet.model import PointNet
 
-LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_3_2.laz'
+LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_0_0.laz'
 prefix = LAZ_FPATH.split(os.sep)[-1].replace('.laz', '')
 out_dir = LAZ_FPATH + '-outs'
 
