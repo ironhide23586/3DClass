@@ -24,6 +24,8 @@ from data_io import LAZElem
 from pointnet.model import PointNet
 
 LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_3_2.laz'
+prefix = LAZ_FPATH.split(os.sep)[-1].replace('.laz', '')
+out_dir = LAZ_FPATH + '-outs'
 
 laz_data = LAZElem(LAZ_FPATH)
 laz_data.load()
@@ -33,15 +35,31 @@ pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
 
 def clf_pcl(xy):
     suffix = '-'.join(map(str, xy))
+    fp = out_dir + os.sep + prefix + '_' + suffix + '.ply'
+    if os.path.exists(fp):
+        print(fp, 'exists, skipping... (╯°□°）╯︵ ┻━┻')
+    print('(☞ﾟヮﾟ)☞ Processing', fp)
     ret = laz_data.sample_tile(xy)
     if ret is None:
         return
     tile_xyzs_raw, t_vec, _ = ret
     tile_xyzs = utils_.xyz_preprocess(tile_xyzs_raw)
-    tile_pred = utils_.scores2labels(pnet.infer(tile_xyzs), tile_xyzs)
-    labels_pred_rgb = utils_.new_colors[tile_pred]
-    fp = out_dir + os.sep + prefix + '_' + suffix + '.ply'
-    utils_.write_ply(fp, tile_xyzs_raw + t_vec, labels_pred_rgb)
+    if tile_xyzs.shape[0] > 12000:
+        i = []
+        rgbs = []
+        for _ in range(2):
+            idx = np.arange(tile_xyzs.shape[0])
+            np.random.choice(idx, 12000)
+            tile_pred = utils_.scores2labels(pnet.infer(tile_xyzs[idx]), tile_xyzs[idx])
+            labels_pred_rgb = utils_.new_colors[tile_pred]
+            i.append(idx)
+            rgbs.append(labels_pred_rgb)
+        i_ = np.hstack(i)
+        utils_.write_ply(fp, tile_xyzs_raw[i_] + t_vec, np.vstack(rgbs))
+    else:
+        tile_pred = utils_.scores2labels(pnet.infer(tile_xyzs), tile_xyzs)
+        labels_pred_rgb = utils_.new_colors[tile_pred]
+        utils_.write_ply(fp, tile_xyzs_raw + t_vec, labels_pred_rgb)
 
 
 if __name__ == '__main__':
@@ -60,8 +78,6 @@ if __name__ == '__main__':
     nx, ny = laz_data.num_xy_tiles
     tile_centers = np.rollaxis(np.array(np.meshgrid(np.arange(nx), np.arange(ny))), 0, 3).reshape([-1, 2])
 
-    prefix = LAZ_FPATH.split(os.sep)[-1].replace('.laz', '')
-    out_dir = LAZ_FPATH + '-outs'
     utils_.force_makedir(out_dir)
 
     # for tc in tile_centers:
