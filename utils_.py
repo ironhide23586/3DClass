@@ -46,7 +46,8 @@ import pylas
 import numpy as np
 import cv2
 from plyfile import PlyElement, PlyData
-
+from shapely.geometry.polygon import Polygon
+from shapely.geometry import Point
 
 label_colors = [(0, 0, 0), (244, 35, 231), (152, 250, 152),
                 # 0 = unlabelled, 1 = man-made-terrain, 2 = natural-terrain
@@ -103,13 +104,46 @@ def scores2labels(scores, tile_xyzs):
     if xys.shape[0] > 0:
         xys_ = ((xys / [GRID_W, GRID_H]) - .5) * 2.
         d = np.array([np.linalg.norm(p[:, :2] - p_, axis=1) for p_ in xys_])
-        d_thresh = POINT_TILER_SIDE / GRID_W
+        d_thresh = 200 * POINT_TILER_SIDE / GRID_W
         d_xys_painted = np.rollaxis(np.array(np.meshgrid(np.arange(d.shape[1]),
                                                          np.arange(d.shape[0]))), 0, 3)[
-            np.logical_and(d < (200 * d_thresh), d > 0)]
+            np.logical_and(d < d_thresh, d > 0)]
         tree_idx = i[d_xys_painted[:, 0]]
         labels[labels == 1] = 3
         labels[tree_idx] = 1
+        labels[tree_idx][tile_xyzs[tree_idx, -1] < .36] = 2
+
+        ret = cv2.findContours(cv2.dilate(canvas, np.ones([3, 3])).astype(np.uint8),
+                               cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if len(ret) == 3:
+            _, contours, _ = ret
+        else:
+            contours, _ = ret
+        # Find the convex hull object for each contour
+        hull_list = []
+        for i_ in range(len(contours)):
+            a = cv2.contourArea(contours[i_])
+            if a < 500 and a > 300:
+                hull = cv2.convexHull(contours[i_])
+                hull_list.append(np.squeeze(hull))
+        # Draw contours + hull results
+        # drawing = np.zeros((canvas.shape[0], canvas.shape[1], 3), dtype=np.uint8)
+        # for i_ in range(len(hull_list)):
+        #     color = (np.random.randint(0, 256), np.random.randint(0, 256), np.random.randint(0, 256))
+        #     cv2.drawContours(drawing, contours, i_, color)
+        #     cv2.drawContours(drawing, hull_list, i_, color)
+        # cv2.imwrite('v.png', drawing)
+
+        points = [Point(p) for p in p[:, :2]]
+        f_ = p[:, -1] < .4
+        for hull in hull_list:
+            hull_xys = (hull / GRID_W - .5) * 2
+            poly = Polygon(hull_xys)
+            f = np.logical_and(np.array([poly.contains(p) for p in points]), f_)
+            car_idx = i[f]
+            labels[car_idx] = 4
+    # labels[np.logical_and(labels == 3, tile_xyzs[:, -1] < .35)] = 4
+    # labels[np.logical_and(labels == 1, tile_xyzs[:, -1] < .35)] = 2
     labels[tile_xyzs[:, -1] < .18] = 0
     return labels
 
@@ -153,6 +187,7 @@ def sample_data(point_data, random_transform=False):
     else:
         xs, ys = sample_data_worker(point_data, random_transform)
     return xs, ys
+
 
 def get_rot_mat(quaternion_):
     quaternion = quaternion_ / np.linalg.norm(quaternion_)
