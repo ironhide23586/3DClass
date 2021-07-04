@@ -47,11 +47,16 @@ def clf_pcl(xy):
     if tile_xyzs.shape[0] > 12000:
         i = []
         rgbs = []
-        n = int(np.ceil(tile_xyzs.shape[0] / 12000))
-        print('Big PCL, running', n, 'passes sampling random points uniformly in each')
-        for _ in range(n):
-            idx = np.arange(tile_xyzs.shape[0])
-            np.random.choice(idx, 12000)
+        pidx = np.arange(tile_xyzs.shape[0])
+        n_passes = int(np.ceil(tile_xyzs.shape[0] / 12000))
+        print('Big PCL, running', n_passes, 'passes sampling random points uniformly in each')
+        filt = np.ones(tile_xyzs.shape[0]).astype(np.bool)
+        for k_ in range(n_passes):
+            if k_ < n_passes - 1:
+                idx = np.random.choice(pidx[filt], 12000)
+                filt[idx] = False
+            else:
+                idx = pidx[filt]
             tile_pred = utils_.scores2labels(pnet.infer(tile_xyzs[idx]), tile_xyzs[idx])
             labels_pred_rgb = utils_.new_colors[tile_pred]
             i.append(idx)
