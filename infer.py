@@ -66,8 +66,8 @@ def clf_pcl(xy, pnet, out_dir, prefix, laz_data):
 
 def process_laz(fpath, pnet):
     laz_data = LAZElem(fpath)
-    prefix = LAZ_FPATH.split(os.sep)[-1].replace('.laz', '')
-    out_dir = LAZ_FPATH + '-outs'
+    prefix = fpath.split(os.sep)[-1].replace('.laz', '')
+    out_dir = fpath + '-outs'
     laz_data.load()
     nx, ny = laz_data.num_xy_tiles
     tile_centers = np.rollaxis(np.array(np.meshgrid(np.arange(nx), np.arange(ny))), 0, 3).reshape([-1, 2])
