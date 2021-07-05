@@ -90,29 +90,152 @@ def force_makedir(dir):
         os.makedirs(dir)
 
 
-def scores2labels(scores, tile_xyzs):
+def vector_angle(a, b):
+    inner = np.inner(a, b)
+    norms = np.linalg.norm(a) * np.linalg.norm(b)
+    cos = inner / norms
+    rad = np.arccos(np.clip(cos, -1.0, 1.0))
+    deg = np.rad2deg(rad)
+    return deg
+
+
+def compare_planarity(plane_points, p):
+    v = np.abs(np.linalg.det(plane_points - p))
+    return v
+
+
+def get_planarity_score(p__):
+    p_ = np.unique(p__, axis=0)
+    if p_.shape[0] < 4:
+        return 0.
+    tlp = p_.min(axis=0)
+    ii_ = np.linalg.norm(tlp - p_, axis=-1).argmin()
+    reordered_points = [p_[ii_]]
+    buff = np.vstack([p_[:ii_], p_[ii_ + 1:]])
+    plane_scores = []
+    ref_poly = None
+    for ii in range(1, p_.shape[0]):
+        ii_ = np.linalg.norm(reordered_points[-1] - buff, axis=-1).argmin()
+        reordered_points.append(buff[ii_])
+        if ref_poly is None and len(reordered_points) > 3:
+            ref_poly = reordered_points[-4:-1]
+        if ref_poly is not None:
+            plane_scores.append(compare_planarity(ref_poly, reordered_points[-1]))
+        if ii + 1 < p_.shape[0]:
+            buff = np.vstack([buff[:ii_], buff[ii_ + 1:]])
+    plane_scores = np.array(plane_scores) * 1e5
+    plane_score = 0
+    if plane_scores.shape[0] > 1 and plane_scores.max() != 0:
+        plane_score = 1. - plane_scores.mean()
+    return plane_score
+
+
+def reorder_points(p_):
+    tlp = p_.min(axis=0)
+    pi_ = np.arange(p_.shape[0])
+    ii_ = np.linalg.norm(tlp - p_, axis=-1).argmin()
+    reordered_points = [p_[ii_]]
+    reordered_points_idx = [pi_[ii_]]
+    buff = np.vstack([p_[:ii_], p_[ii_ + 1:]])
+    buffi = np.hstack([pi_[:ii_], pi_[ii_ + 1:]])
+    for ii in range(1, p_.shape[0]):
+        ii_ = np.linalg.norm(reordered_points[-1] - buff, axis=-1).argmin()
+        reordered_points.append(buff[ii_])
+        reordered_points_idx.append(buffi[ii_])
+        if ii + 1 < p_.shape[0]:
+            buff = np.vstack([buff[:ii_], buff[ii_ + 1:]])
+            buffi = np.hstack([buffi[:ii_], buffi[ii_ + 1:]])
+    return np.array(reordered_points), np.array(reordered_points_idx)
+
+
+def point_walk(p_, tlp, stop_thresh=.031):
+    reordered_points = []
+    reordered_points_idx = []
+    pi_ = np.arange(p_.shape[0])
+    ds = np.linalg.norm(tlp - p_, axis=-1)
+    ii_ = ds.argmin()
+    if ds[ii_] > stop_thresh:
+        return reordered_points, reordered_points_idx
+    reordered_points = [p_[ii_]]
+    reordered_points_idx = [pi_[ii_]]
+    buff = np.vstack([p_[:ii_], p_[ii_ + 1:]])
+    buffi = np.hstack([pi_[:ii_], pi_[ii_ + 1:]])
+    for ii in range(1, p_.shape[0]):
+        ds = np.linalg.norm(reordered_points[-1] - buff, axis=-1)
+        ii_ = ds.argmin()
+        if ds[ii_] > stop_thresh:
+            break
+        reordered_points.append(buff[ii_])
+        reordered_points_idx.append(buffi[ii_])
+        if ii + 1 < p_.shape[0]:
+            buff = np.vstack([buff[:ii_], buff[ii_ + 1:]])
+            buffi = np.hstack([buffi[:ii_], buffi[ii_ + 1:]])
+    return reordered_points, reordered_points_idx
+
+
+def scores2labels(scores, tile_xyzs, t=.045):
     labels = scores.argmax(axis=1)
     idx = np.arange(scores.shape[0])
     i = idx[labels == 1]
     p = tile_xyzs[i]
+
+    xs, ys, zs = p.T
+    microcube_side = .1
+    # cube = []
+    nx = int((xs.max() - xs.min()) / microcube_side)
+    ny = int((ys.max() - ys.min()) / microcube_side)
+    nz = int((zs.max() - zs.min()) / microcube_side)
+    xmin, ymin, zmin = p.min(axis=0)
+    for y in range(ny):
+        for x in range(nx):
+            for z in range(nz):
+                sx = xmin + x * microcube_side
+                sy = ymin + y * microcube_side
+                sz = zmin + z * microcube_side
+                ex = sx + microcube_side
+                ey = sy + microcube_side
+                ez = sz + microcube_side
+                filt = np.logical_and(
+                    np.logical_and(np.logical_and(np.logical_and(np.logical_and(xs >= sx, xs < ex), ys >= sy), ys < ey),
+                                   zs >= sz), zs < ez)
+                p_ = p[filt]
+                if p_.shape[0] > 2:
+                    # cube.append([(sx, sy, sz), p_])
+                    plane_score = get_planarity_score(p_)
+                    if plane_score > .5:
+                        chunk_indices = i[filt]
+                        chunk_xyzs = tile_xyzs[chunk_indices]
+                        labels[chunk_indices] = 3  # building
+                        for j in range(chunk_xyzs.shape[0]):
+                            xyz = chunk_xyzs[j]
+                            # j_ = chunk_indices[j]
+                            bag = p[labels[i] == 1]
+                            bagi = i[labels[i] == 1]
+                            if bag.shape[0] == 0:
+                                break
+                            _, j__ = point_walk(bag, xyz, t)
+                            paint_idx = bagi[j__]
+                            labels[paint_idx] = 3  # building
+                        # k = 0
+                    # # colors = np.tile([[0, (1. - plane_score) * 255, plane_score * 255]], [p_.shape[0], 1])
+                    # ls = np.round(plane_score).astype(np.int)
+                    # colors = np.tile([[0, (1. - ls) * 255, ls * 255]], [p_.shape[0], 1])
+                    # write_ply('scratchspace/g-' + '-'.join(map(str, [plane_score, x, y, z])) + '.ply', p_, colors)
     canvas = np.zeros([GRID_H, GRID_W])
     xys = (((p[:, :2] + 1) / 2.) * [GRID_W, GRID_H]).astype(np.int)
-    canvas[xys[:, 1], xys[:, 0]] = 255
+    canvas[xys[:, 1], xys[:, 0]] = (np.clip(p[:, -1] - p[:, -1].min(), 0., 1.) * 255).astype(np.uint8)
     tree_hm = cv2.erode(canvas, np.ones([2, 2]))
     xys = np.unique(np.rollaxis(np.array(np.meshgrid(np.arange(GRID_W),
                                                      np.arange(GRID_H))), 0, 3)[tree_hm > 0], axis=0)
     if xys.shape[0] > 0:
         xys_ = ((xys / [GRID_W, GRID_H]) - .5) * 2.
         d = np.array([np.linalg.norm(p[:, :2] - p_, axis=1) for p_ in xys_])
-        d_thresh = 200 * POINT_TILER_SIDE / GRID_W
+        d_thresh = 500 * POINT_TILER_SIDE / GRID_W
         d_xys_painted = np.rollaxis(np.array(np.meshgrid(np.arange(d.shape[1]),
                                                          np.arange(d.shape[0]))), 0, 3)[
             np.logical_and(d < d_thresh, d > 0)]
         tree_idx = i[d_xys_painted[:, 0]]
-        labels[labels == 1] = 3
-        labels[tree_idx] = 1
         labels[tree_idx][tile_xyzs[tree_idx, -1] < .36] = 2
-
         ret = cv2.findContours(cv2.dilate(canvas, np.ones([3, 3])).astype(np.uint8),
                                cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if len(ret) == 3:
@@ -126,14 +249,6 @@ def scores2labels(scores, tile_xyzs):
             if a < 500 and a > 300:
                 hull = cv2.convexHull(contours[i_])
                 hull_list.append(np.squeeze(hull))
-        # Draw contours + hull results
-        # drawing = np.zeros((canvas.shape[0], canvas.shape[1], 3), dtype=np.uint8)
-        # for i_ in range(len(hull_list)):
-        #     color = (np.random.randint(0, 256), np.random.randint(0, 256), np.random.randint(0, 256))
-        #     cv2.drawContours(drawing, contours, i_, color)
-        #     cv2.drawContours(drawing, hull_list, i_, color)
-        # cv2.imwrite('v.png', drawing)
-
         points = [Point(p) for p in p[:, :2]]
         f_ = p[:, -1] < .4
         for hull in hull_list:
@@ -142,9 +257,7 @@ def scores2labels(scores, tile_xyzs):
             f = np.logical_and(np.array([poly.contains(p) for p in points]), f_)
             car_idx = i[f]
             labels[car_idx] = 4
-    # labels[np.logical_and(labels == 3, tile_xyzs[:, -1] < .35)] = 4
-    # labels[np.logical_and(labels == 1, tile_xyzs[:, -1] < .35)] = 2
-    labels[tile_xyzs[:, -1] < .18] = 0
+    labels[tile_xyzs[:, -1] < .15] = 0
     return labels
 
 
@@ -281,11 +394,11 @@ def write_ply(out_ply_fpath, xyzs__, rgbs__=None, stride=1):
             rgbs = rgbs_
     print('Writing points to', out_ply_fpath, ' 👉 Number of points =', xyzs.shape[0])
     if rgbs is not None:
-        data = np.array(list(map(tuple, np.hstack([xyzs, rgbs]))),
+        data = np.array(list(map(tuple, np.hstack([xyzs.astype(np.float32), rgbs.astype(np.float32)]))),
                         dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'),
                                ('blue', 'u1')])
     else:
-        data = np.array(list(map(tuple, xyzs)), dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
+        data = np.array(list(map(tuple, xyzs.astype(np.float32))), dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
     el = PlyElement.describe(data, 'vertex')
     PlyData([el]).write(out_ply_fpath)
     print('👌 done! ☜(ﾟヮﾟ☜)')

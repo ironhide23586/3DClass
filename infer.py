@@ -15,7 +15,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import cpu_count
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 import numpy as np
 
@@ -23,7 +23,7 @@ import utils_
 from data_io import LAZElem
 from pointnet.model import PointNet
 
-LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_0_0.laz'
+LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_3_2.laz'
 prefix = LAZ_FPATH.split(os.sep)[-1].replace('.laz', '')
 out_dir = LAZ_FPATH + '-outs'
 
@@ -75,7 +75,8 @@ if __name__ == '__main__':
     # tile_xyzs_raw, t_vec, _ = ret
     # tile_xyzs = utils_.xyz_preprocess(tile_xyzs_raw)
     #
-    # idx = np.random.choice(np.arange(tile_xyzs.shape[0]), 15000)
+    # if tile_xyzs.shape[0] > 15000:
+    #     idx = np.random.choice(np.arange(tile_xyzs.shape[0]), 15000)
     # tile_xyzs = tile_xyzs[idx]
     # scores = pnet.infer(tile_xyzs)
     # labels = utils_.scores2labels(scores, tile_xyzs)
