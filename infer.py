@@ -23,14 +23,14 @@ import utils_
 from data_io import LAZElem
 from pointnet.model import PointNet
 
-LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_3_2.laz'
+LAZ_FPATH = utils_.DIR + os.sep + 'C_37EZ1_0_2.laz'
 prefix = LAZ_FPATH.split(os.sep)[-1].replace('.laz', '')
 out_dir = LAZ_FPATH + '-outs'
 
 laz_data = LAZElem(LAZ_FPATH)
 laz_data.load()
 pnet = PointNet(mode='infer')
-pnet.load_weights(utils_.DIR + '/aerial-pointnet-weights.19-1.24.hdf5')
+pnet.load_weights('aerial-pointnet-weights.19-1.24.hdf5')
 
 
 def clf_pcl(xy):
